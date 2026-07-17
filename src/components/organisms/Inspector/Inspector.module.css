@@ -1,0 +1,76 @@
+.inspector {
+  width: 320px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  font-family: var(--font-ui);
+  padding: var(--space-4);
+}
+
+.empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-base);
+}
+
+.header {
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
+  display: grid;
+  gap: 2px;
+}
+
+.headerRow {
+  display: flex;
+  gap: 4px;
+  font-size: var(--text-sm);
+}
+
+.headerLabel {
+  color: var(--text-secondary);
+}
+
+.headerValue {
+  color: var(--text-primary);
+}
+
+.section {
+  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-3) 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.observerList {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.observerItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.removeObserver {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+}

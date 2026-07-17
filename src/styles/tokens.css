@@ -1,0 +1,84 @@
+/*
+  Tokens copiados literalmente de Assembler_IDE_Design_Gallery.html (sección "1. Tokens").
+  No inventar valores nuevos acá: si falta un token, volver a la galería.
+*/
+:root {
+  /* base surfaces — blueprint dark */
+  --bg-canvas: #0D1117;
+  --bg-surface: #161B22;
+  --bg-surface-raised: #1C2333;
+  --bg-surface-sunken: #010409;
+  --border-subtle: #21262D;
+  --border-default: #30363D;
+  --border-strong: #3D444D;
+
+  /* text */
+  --text-primary: #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-tertiary: #6E7681;
+  --text-disabled: #4B535D;
+
+  /* AST structural node colors */
+  --node-body: #E6EDF3;
+  --node-column: #3B82F6;
+  --node-row: #22C55E;
+
+  /* component-type palette — 7 distinguishable hues */
+  --node-button: #F43F5E;
+  --node-catalog: #8B5CF6;
+  --node-fractal: #D946EF;
+  --node-icon: #2DD4BF;
+  --node-image: #22D3EE;
+  --node-textfield: #A3E635;
+  --node-textlabel: #A8A29E;
+
+  /* interaction state */
+  --state-selected: #FBBF24;
+  --state-selected-bg: rgba(251, 191, 36, 0.08);
+  --state-trigger-dot: #F97316;
+  --state-hover-bg: rgba(230, 237, 243, 0.06);
+  --state-focus-ring: #3B82F6;
+
+  /* semantic accents */
+  --accent-primary: #3B82F6;
+  --accent-primary-hover: #5B9DF7;
+  --danger: #EF4444;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --success: #22C55E;
+  --warning: #F59E0B;
+
+  /* typography */
+  --font-ui: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --text-2xl: 24px;
+  --text-xl: 20px;
+  --text-lg: 16px;
+  --text-md: 14px;
+  --text-base: 13px;
+  --text-sm: 12px;
+  --text-xs: 11px;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.45;
+
+  /* spacing */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* radii */
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /* shadows */
+  --shadow-panel: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.5);
+}

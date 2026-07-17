@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>Assembler IDE — Galería de Diseño</title>
+<style>:root {
+  /* base surfaces — blueprint dark */
+  --bg-canvas: #0D1117;
+  --bg-surface: #161B22;
+  --bg-surface-raised: #1C2333;
+  --bg-surface-sunken: #010409;
+  --border-subtle: #21262D;
+  --border-default: #30363D;
+  --border-strong: #3D444D;
+
+  /* text */
+  --text-primary: #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-tertiary: #6E7681;
+  --text-disabled: #4B535D;
+
+  /* AST structural node colors */
+  --node-body: #E6EDF3;
+  --node-column: #3B82F6;
+  --node-row: #22C55E;
+
+  /* component-type palette — 7 distinguishable hues */
+  --node-button: #F43F5E;
+  --node-catalog: #8B5CF6;
+  --node-fractal: #D946EF;
+  --node-icon: #2DD4BF;
+  --node-image: #22D3EE;
+  --node-textfield: #A3E635;
+  --node-textlabel: #A8A29E;
+
+  /* interaction state */
+  --state-selected: #FBBF24;
+  --state-selected-bg: rgba(251, 191, 36, 0.08);
+  --state-trigger-dot: #F97316;
+  --state-hover-bg: rgba(230, 237, 243, 0.06);
+  --state-focus-ring: #3B82F6;
+
+  /* semantic accents */
+  --accent-primary: #3B82F6;
+  --accent-primary-hover: #5B9DF7;
+  --danger: #EF4444;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --success: #22C55E;
+  --warning: #F59E0B;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("08dd4021-ba25-45e0-894c-20f718ebdee4") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("65ede5b0-0bd3-4fad-9351-b544188277f3") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("6690ab8a-3f6b-4932-90e4-b9c577de8686") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("0b67c5e3-6af7-48c3-ad83-b01b4210f0cf") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("71b0a021-b71f-42d3-9b7d-ccef9738ada5") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("81f8b588-33a1-467f-9c7f-022a17d4632f") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("0f58a7e4-eec4-4294-92b8-995aa86a5e44") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("f012a126-0a1f-4db8-af94-88ec3bf1514e") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("8bf2bc93-96c0-4d09-8249-9f77ee7bc259") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("58be978f-9598-4763-b0ac-322ccece1931") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("53185602-f52e-43bd-8369-13bee2fcf4ff") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("6f7bb67d-cf75-4559-8d8f-646d499b6636") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("b733d22d-3c7c-4c20-b8cd-8a8dd5d2779f") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("ef36c911-292e-429f-81a0-85fdf8cbea19") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("43ae6eac-5c43-4702-99c4-d1ceb3f1bc5c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("626e92c4-764b-4b83-84de-11f3aba2f7c7") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("d1112098-685c-4577-a015-5f5fff511dd9") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("bc568aaa-08e4-469f-84a6-b9ae99ea91fd") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("b0cbb2c7-ded6-46c9-9343-e330797c76e5") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("3ed3a3fb-2353-476a-9fa2-fc9cc93eb88e") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("47a9af2a-5479-4200-9c61-d7d831b8758d") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("626e92c4-764b-4b83-84de-11f3aba2f7c7") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("d1112098-685c-4577-a015-5f5fff511dd9") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("bc568aaa-08e4-469f-84a6-b9ae99ea91fd") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("b0cbb2c7-ded6-46c9-9343-e330797c76e5") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("3ed3a3fb-2353-476a-9fa2-fc9cc93eb88e") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("47a9af2a-5479-4200-9c61-d7d831b8758d") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("626e92c4-764b-4b83-84de-11f3aba2f7c7") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("d1112098-685c-4577-a015-5f5fff511dd9") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("bc568aaa-08e4-469f-84a6-b9ae99ea91fd") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("b0cbb2c7-ded6-46c9-9343-e330797c76e5") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("3ed3a3fb-2353-476a-9fa2-fc9cc93eb88e") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("47a9af2a-5479-4200-9c61-d7d831b8758d") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("626e92c4-764b-4b83-84de-11f3aba2f7c7") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("d1112098-685c-4577-a015-5f5fff511dd9") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("bc568aaa-08e4-469f-84a6-b9ae99ea91fd") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("b0cbb2c7-ded6-46c9-9343-e330797c76e5") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("3ed3a3fb-2353-476a-9fa2-fc9cc93eb88e") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("47a9af2a-5479-4200-9c61-d7d831b8758d") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+
+:root {
+  --font-ui: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.45;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+}
+
+:root {
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  --border-width: 1px;
+  --border-width-selected: 2px;
+
+  --shadow-panel: 0 0 0 1px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-dropdown: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+</style>
+
+<style>
+  :root {
+    --doc-bg: #F7F7F5; --doc-surface: #FFFFFF; --doc-border: #E4E4E1;
+    --doc-text: #18181B; --doc-text-2: #6B6B68; --doc-mono-bg: #EEEEEC;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--doc-bg); color: var(--doc-text); font-family: -apple-system, 'Segoe UI', sans-serif; }
+  a { color: #3B82F6; text-decoration: none; }
+  a:hover { color: #1D4ED8; text-decoration: underline; }
+
+  .toc {
+    position: fixed; top: 0; left: 0; width: 220px; height: 100vh; overflow-y: auto;
+    background: var(--doc-surface); border-right: 1px solid var(--doc-border); padding: 20px 0; z-index: 10;
+  }
+  .toc-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--doc-text-2); padding: 0 20px 10px; }
+  .toc a { display: block; padding: 5px 20px; font-size: 13px; color: var(--doc-text); }
+  .toc a:hover { background: var(--doc-mono-bg); text-decoration: none; }
+  .toc .sub { padding-left: 32px; font-size: 12px; color: var(--doc-text-2); }
+
+  .main { margin-left: 220px; padding: 40px 48px 120px; max-width: 1120px; }
+  section { padding-top: 24px; margin-bottom: 56px; scroll-margin-top: 20px; border-top: 1px solid var(--doc-border); }
+  section:first-child { border-top: none; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  h2 { font-size: 20px; margin: 0 0 4px; }
+  h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--doc-text-2); margin: 28px 0 12px; }
+  .intro { color: var(--doc-text-2); font-size: 14px; margin-bottom: 8px; max-width: 720px; }
+
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  .spec-tag { font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: var(--doc-mono-bg); color: #3F3F3D; padding: 2px 6px; border-radius: 4px; }
+
+  .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .swatch { background: var(--doc-surface); border: 1px solid var(--doc-border); border-radius: 8px; overflow: hidden; }
+  .swatch-color { height: 56px; }
+  .swatch-info { padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
+  .swatch-name { font-size: 12px; font-weight: 600; }
+  .swatch-use { font-size: 11px; color: var(--doc-text-2); }
+
+  .dark-frame { background: #0D1117; border-radius: 10px; padding: 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+  .card-block { background: var(--doc-surface); border: 1px solid var(--doc-border); border-radius: 10px; padding: 16px 20px 20px; margin-bottom: 16px; }
+  .card-block-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .card-block-dims { font-size: 11px; color: var(--doc-text-2); margin-bottom: 12px; }
+
+  .type-row { display: flex; align-items: baseline; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--doc-border); }
+  .type-row:last-child { border-bottom: none; }
+  .type-sample { color: #0D1117; flex-shrink: 0; min-width: 220px; }
+  .type-spec { font-size: 11px; color: var(--doc-text-2); font-family: 'IBM Plex Mono', monospace; }
+
+  .space-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+  .space-bar { background: #3B82F6; height: 14px; }
+  .space-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--doc-text-2); width: 90px; }
+
+  .thumb-frame { position: relative; width: 260px; height: 148px; border-radius: 8px; overflow: hidden; border: 1px solid var(--doc-border); background: #0D1117; }
+  .thumb-frame iframe { position: absolute; top: 0; left: 0; width: 1440px; height: 820px; border: none; transform: scale(0.1806); transform-origin: top left; pointer-events: none; }
+  .thumb-link { position: absolute; inset: 0; z-index: 2; }
+  .thumb-caption { font-size: 12px; color: var(--doc-text-2); margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <div class="toc-title">Assembler IDE — Galería</div>
+  <a href="#tokens">1. Tokens</a>
+  <a class="sub" href="#tokens-colors">Colores</a>
+  <a class="sub" href="#tokens-type">Tipografía</a>
+  <a class="sub" href="#tokens-spacing">Espaciado</a>
+  <a class="sub" href="#tokens-radii">Radios / Bordes</a>
+  <a href="#atomos">2. Átomos</a>
+  <a href="#moleculas">3. Moléculas</a>
+  <a href="#organismos">4. Organismos</a>
+  <a class="sub" href="#org-topbar">Topbar (48px)</a>
+  <a class="sub" href="#org-leftpanel">Left Panel (240px)</a>
+  <a class="sub" href="#org-inspector">Inspector (320px)</a>
+  <a class="sub" href="#org-carousel">Carrusel (64px)</a>
+  <a href="#pantallas">5. Pantallas de referencia</a>
+</nav>
+
+<div class="main">
+  <h1>Galería de Diseño — Assembler IDE</h1>
+  <p class="intro">Referencia visual para implementación en React + TypeScript + Tailwind. Todos los valores están tomados directamente de <span class="spec-tag">styles.css</span> / <span class="spec-tag">tokens/*.css</span> — no adivines, copiá de acá.</p>
+
+  <section id="tokens">
+    <h2>1. Tokens</h2>
+    <p class="intro">Tema único: dark blueprint técnico. Fondo base <span class="spec-tag">#0D1117</span>.</p>
+
+    <h3 id="tokens-colors">Colores — Superficies</h3>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#0D1117"></div><div class="swatch-info"><span class="swatch-name mono">--bg-canvas · #0D1117</span><span class="swatch-use">Fondo base del canvas / toda la app</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#161B22"></div><div class="swatch-info"><span class="swatch-name mono">--bg-surface · #161B22</span><span class="swatch-use">Paneles: Left Panel, Inspector, Topbar, Carrusel</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#1C2333"></div><div class="swatch-info"><span class="swatch-name mono">--bg-surface-raised · #1C2333</span><span class="swatch-use">Elementos elevados: dropdowns, menús contextuales</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#010409"></div><div class="swatch-info"><span class="swatch-name mono">--bg-surface-sunken · #010409</span><span class="swatch-use">Campos de formulario (inputs, selects)</span></div></div>
+    </div>
+
+    <h3>Colores — Nodos AST estructurales</h3>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#E6EDF3"></div><div class="swatch-info"><span class="swatch-name mono">--node-body · #E6EDF3</span><span class="swatch-use">Borde de la caja Body (raíz)</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#3B82F6"></div><div class="swatch-info"><span class="swatch-name mono">--node-column · #3B82F6</span><span class="swatch-use">Borde de contenedor Column</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#22C55E"></div><div class="swatch-info"><span class="swatch-name mono">--node-row · #22C55E</span><span class="swatch-use">Borde de contenedor Row</span></div></div>
+    </div>
+
+    <h3>Colores — Paleta de 7 tipos de componente</h3>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#F43F5E"></div><div class="swatch-info"><span class="swatch-name mono">--node-button · #F43F5E</span><span class="swatch-use">Button</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#8B5CF6"></div><div class="swatch-info"><span class="swatch-name mono">--node-catalog · #8B5CF6</span><span class="swatch-use">Catalog</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#D946EF"></div><div class="swatch-info"><span class="swatch-name mono">--node-fractal · #D946EF</span><span class="swatch-use">Fractal</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#2DD4BF"></div><div class="swatch-info"><span class="swatch-name mono">--node-icon · #2DD4BF</span><span class="swatch-use">ICON</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#22D3EE"></div><div class="swatch-info"><span class="swatch-name mono">--node-image · #22D3EE</span><span class="swatch-use">IMAGE</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#A3E635"></div><div class="swatch-info"><span class="swatch-name mono">--node-textfield · #A3E635</span><span class="swatch-use">TextField</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#A8A29E"></div><div class="swatch-info"><span class="swatch-name mono">--node-textlabel · #A8A29E</span><span class="swatch-use">TextLabel</span></div></div>
+    </div>
+
+    <h3>Colores — Estados y semántica</h3>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#FBBF24"></div><div class="swatch-info"><span class="swatch-name mono">--state-selected · #FBBF24</span><span class="swatch-use">Borde de selección activa (2px, siempre gana sobre color de tipo)</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#F97316"></div><div class="swatch-info"><span class="swatch-name mono">--state-trigger-dot · #F97316</span><span class="swatch-use">Punto: componente tiene trigger configurado</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#3B82F6"></div><div class="swatch-info"><span class="swatch-name mono">--accent-primary · #3B82F6</span><span class="swatch-use">Acción primaria (botones, foco de inputs)</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#EF4444"></div><div class="swatch-info"><span class="swatch-name mono">--danger · #EF4444</span><span class="swatch-use">Errores del Validator</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#22C55E"></div><div class="swatch-info"><span class="swatch-name mono">--success · #22C55E</span><span class="swatch-use">Estado "Guardado"</span></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#F59E0B"></div><div class="swatch-info"><span class="swatch-name mono">--warning · #F59E0B</span><span class="swatch-use">Badges de advertencia / condicionalidad</span></div></div>
+    </div>
+
+    <h3 id="tokens-type">Escala Tipográfica</h3>
+    <div class="card-block">
+      <div class="type-row"><span class="type-sample" style="font-family:'IBM Plex Sans';font-size:24px;font-weight:600">Título de sección</span><span class="type-spec">--text-2xl · 24px · weight 600 · font-ui (IBM Plex Sans)</span></div>
+      <div class="type-row"><span class="type-sample" style="font-family:'IBM Plex Sans';font-size:20px;font-weight:600">Header de panel</span><span class="type-spec">--text-xl · 20px · weight 600 · font-ui</span></div>
+      <div class="type-row"><span class="type-sample" style="font-family:'IBM Plex Sans';font-size:16px;font-weight:600">Nombre de componente</span><span class="type-spec">--text-lg · 16px · weight 600 · font-ui</span></div>
+      <div class="type-row"><span class="type-sample" style="font-family:'IBM Plex Sans';font-size:14px;font-weight:500">Nombre de proyecto / tarjeta</span><span class="type-spec">--text-md · 14px · weight 500 · font-ui</span></div>
+      <div class="type-row"><span class="type-sample" style="font-family:'IBM Plex Sans';font-size:13px">Valor de input, texto de cuerpo</span><span class="type-spec">--text-base · 13px · weight 400 · font-ui</span></div>
+      <div class="type-row"><span class="type-sample" style="font-family:'IBM Plex Sans';font-size:12px">Label de campo, meta de tarjeta</span><span class="type-spec">--text-sm · 12px · weight 400 · font-ui</span></div>
+      <div class="type-row"><span class="type-sample" style="font-family:'IBM Plex Sans';font-size:11px;color:#6B6B68">Hint, timestamp</span><span class="type-spec">--text-xs · 11px · weight 400 · font-ui</span></div>
+      <div class="type-row"><span class="type-sample mono" style="font-size:13px">btn_register</span><span class="type-spec">font-mono (IBM Plex Mono) · IDs de componente/vértice, valores técnicos</span></div>
+      <div class="type-row"><span class="type-spec" style="min-width:auto">line-height: 1.2 (leading-tight, headers) · 1.45 (leading-normal, cuerpo)</span></div>
+    </div>
+
+    <h3 id="tokens-spacing">Escala de Espaciado</h3>
+    <div class="card-block">
+      <div class="space-row"><div class="space-bar" style="width:4px"></div><span class="space-label">--space-1 4px</span></div>
+      <div class="space-row"><div class="space-bar" style="width:8px"></div><span class="space-label">--space-2 8px</span></div>
+      <div class="space-row"><div class="space-bar" style="width:12px"></div><span class="space-label">--space-3 12px</span></div>
+      <div class="space-row"><div class="space-bar" style="width:16px"></div><span class="space-label">--space-4 16px</span></div>
+      <div class="space-row"><div class="space-bar" style="width:20px"></div><span class="space-label">--space-5 20px</span></div>
+      <div class="space-row"><div class="space-bar" style="width:24px"></div><span class="space-label">--space-6 24px</span></div>
+      <div class="space-row"><div class="space-bar" style="width:32px"></div><span class="space-label">--space-8 32px</span></div>
+    </div>
+
+    <h3 id="tokens-radii">Radios y Anchos de Borde</h3>
+    <div class="card-block" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+      <div style="text-align:center"><div style="width:56px;height:44px;border:1px solid #3B82F6;border-radius:3px"></div><div class="type-spec" style="margin-top:6px">radius-sm · 3px</div></div>
+      <div style="text-align:center"><div style="width:56px;height:44px;border:1px solid #3B82F6;border-radius:5px"></div><div class="type-spec" style="margin-top:6px">radius-md · 5px</div></div>
+      <div style="text-align:center"><div style="width:56px;height:44px;border:1px solid #3B82F6;border-radius:8px"></div><div class="type-spec" style="margin-top:6px">radius-lg · 8px</div></div>
+      <div style="text-align:center"><div style="width:56px;height:44px;border:1px solid #3B82F6;border-radius:999px"></div><div class="type-spec" style="margin-top:6px">radius-pill · 999px</div></div>
+      <div style="text-align:center"><div style="width:56px;height:44px;border:1px solid #3B82F6;border-radius:5px"></div><div class="type-spec" style="margin-top:6px">border-width · 1px (default)</div></div>
+      <div style="text-align:center"><div style="width:56px;height:44px;border:2px solid #FBBF24;border-radius:5px"></div><div class="type-spec" style="margin-top:6px">border-width-selected · 2px</div></div>
+    </div>
+  </section>
+
+  <section id="atomos">
+    <h2>2. Átomos</h2>
+    <p class="intro">Componente + variantes/estados lado a lado, sobre el fondo oscuro real de producción.</p>
+
+    <div class="card-block">
+      <div class="card-block-title">Button</div>
+      <div class="card-block-dims">height 32px (md) / 26px (sm) · radius-sm · font-ui weight 500</div>
+      <div class="dark-frame">
+        <button style="height:32px;padding:6px 14px;border-radius:5px;border:1px solid #3B82F6;background:#3B82F6;color:#0D1117;font-family:'IBM Plex Sans';font-weight:500;font-size:13px;cursor:pointer">Primary</button>
+        <button style="height:32px;padding:6px 14px;border-radius:5px;border:1px solid #5B9DF7;background:#5B9DF7;color:#0D1117;font-family:'IBM Plex Sans';font-weight:500;font-size:13px;cursor:pointer">Primary · hover</button>
+        <button style="height:32px;padding:6px 14px;border-radius:5px;border:1px solid #3B82F6;background:#3B82F6;color:#0D1117;font-family:'IBM Plex Sans';font-weight:500;font-size:13px;opacity:.45">Primary · disabled</button>
+        <button style="height:32px;padding:6px 14px;border-radius:5px;border:1px solid #30363D;background:#1C2333;color:#E6EDF3;font-family:'IBM Plex Sans';font-weight:500;font-size:13px;cursor:pointer">Secondary</button>
+        <button style="height:32px;width:32px;border-radius:5px;border:1px solid transparent;background:transparent;color:#8B949E;font-size:14px;cursor:pointer">×</button>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-block-title">Input</div>
+      <div class="card-block-dims">bg-surface-sunken · border-default (focus: accent-primary, error: danger) · radius-sm</div>
+      <div class="dark-frame">
+        <div><label style="font-family:'IBM Plex Sans';font-size:11px;color:#8B949E;display:block;margin-bottom:4px">label</label><input value="Registrarme" style="font-family:'IBM Plex Sans';font-size:13px;color:#E6EDF3;background:#010409;border:1px solid #30363D;border-radius:5px;padding:6px 8px;width:180px"></div>
+        <div><label style="font-family:'IBM Plex Sans';font-size:11px;color:#8B949E;display:block;margin-bottom:4px">focus</label><input value="Registrarme" style="font-family:'IBM Plex Sans';font-size:13px;color:#E6EDF3;background:#010409;border:1px solid #3B82F6;border-radius:5px;padding:6px 8px;width:180px"></div>
+        <div><label style="font-family:'IBM Plex Sans';font-size:11px;color:#8B949E;display:block;margin-bottom:4px">error</label><input value="" style="font-family:'IBM Plex Sans';font-size:13px;color:#E6EDF3;background:#010409;border:1px solid #EF4444;border-radius:5px;padding:6px 8px;width:180px"><div style="font-size:11px;color:#EF4444;margin-top:4px">Campo requerido</div></div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-block-title">Select</div>
+      <div class="dark-frame">
+        <select style="font-family:'IBM Plex Sans';font-size:13px;color:#E6EDF3;background:#010409;border:1px solid #30363D;border-radius:5px;padding:6px 8px;width:140px"><option>POST</option></select>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-block-title">StatusBadge (● Configurado / ○ Vacío)</div>
+      <div class="dark-frame">
+        <div style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Sans';font-size:12px;color:#E6EDF3"><span style="width:8px;height:8px;border-radius:50%;background:#F97316"></span>ON_CLICK</div>
+        <div style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Sans';font-size:12px;color:#6E7681"><span style="width:8px;height:8px;border-radius:50%;border:1px solid #6E7681"></span>ON_OBSERVE</div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-block-title">ComponentChip</div>
+      <div class="dark-frame">
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px"><span style="width:20px;height:20px;border-radius:3px;border:1px solid #F43F5E;color:#F43F5E;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono';font-size:9px;font-weight:600">B</span><span style="font-family:'IBM Plex Sans';font-size:13px;color:#E6EDF3">Button / Simple</span></div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-block-title">AST Node Indicator (vacío)</div>
+      <div class="dark-frame">
+        <div style="padding:8px 10px;border-radius:5px;border:1px solid #3B82F6;background:#161B22;min-width:100px"><span style="font-size:11px;font-weight:600;color:#3B82F6;text-transform:uppercase">Column</span></div>
+        <div style="padding:8px 10px;border-radius:5px;border:2px solid #FBBF24;background:rgba(251,191,36,.08);min-width:100px"><span style="font-size:11px;font-weight:600;color:#FBBF24;text-transform:uppercase">Selected</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="moleculas">
+    <h2>3. Moléculas</h2>
+
+    <div class="card-block">
+      <div class="card-block-title">AST Node con contenido (Component)</div>
+      <div class="dark-frame">
+        <div style="position:relative;padding:10px 12px;border-radius:5px;border:2px solid #FBBF24;background:rgba(251,191,36,.08);min-width:150px">
+          <span style="position:absolute;top:-5px;right:-5px;width:9px;height:9px;border-radius:50%;background:#F97316;border:1.5px solid #0D1117"></span>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="width:16px;height:16px;border-radius:3px;border:1px solid #F43F5E;color:#F43F5E;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono';font-size:8px;font-weight:600">B</span><span style="font-size:10px;font-weight:600;color:#F43F5E;text-transform:uppercase">Button</span></div>
+          <div style="font-family:'IBM Plex Sans';font-size:13px;color:#E6EDF3">Submit Button</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-block-title">Trigger Vertex Card</div>
+      <div class="dark-frame">
+        <div style="width:190px;background:#161B22;border-radius:5px;border:1px solid #30363D;overflow:hidden">
+          <div style="background:#2DD4BF;color:#0D1117;font-size:11px;font-weight:600;padding:5px 10px">API_CALL</div>
+          <div style="padding:8px 10px"><div style="font-family:'IBM Plex Mono';font-size:11px"><span style="color:#6E7681">endpoint:</span> <span style="color:#8B949E">/submit</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-block-title">Inspector Property Row (label + input + error)</div>
+      <div class="dark-frame">
+        <div style="width:200px"><label style="font-family:'IBM Plex Sans';font-size:11px;color:#8B949E;display:flex;gap:4px;margin-bottom:4px">baseUrl <span style="color:#EF4444">*</span></label><input style="width:100%;font-family:'IBM Plex Sans';font-size:13px;color:#E6EDF3;background:#010409;border:1px solid #EF4444;border-radius:5px;padding:6px 8px"><div style="font-size:11px;color:#EF4444;margin-top:4px">Este campo es requerido</div></div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-block-title">Event Row (nombre + badge + flecha)</div>
+      <div class="dark-frame">
+        <div style="width:260px;display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #21262D;font-family:'IBM Plex Sans'">
+          <span style="font-family:'IBM Plex Mono';font-size:12px;color:#E6EDF3">ON_CLICK</span>
+          <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#F97316"></span><span style="font-size:11px;color:#6E7681">Configurado</span><span style="color:#6E7681;font-size:11px">→</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="organismos">
+    <h2>4. Organismos</h2>
+
+    <div class="card-block" id="org-topbar">
+      <div class="card-block-title">Topbar / Header</div>
+      <div class="card-block-dims">100% × 48px · fijo</div>
+      <div class="dark-frame" style="padding:0">
+        <div style="height:48px;width:100%;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#161B22;border-bottom:1px solid #21262D">
+          <div style="display:flex;align-items:center;gap:14px;font-family:'IBM Plex Sans'">
+            <div style="width:20px;height:20px;border-radius:4px;border:1px solid #3B82F6;color:#3B82F6;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono';font-size:10px;font-weight:600">A</div>
+            <span style="color:#8B949E;font-size:12px">‹ Mis Proyectos</span><span style="color:#3D444D">|</span><span style="color:#E6EDF3;font-size:13px;font-weight:500">Mi App E-Commerce</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#6E7681"><span style="width:6px;height:6px;border-radius:50%;background:#22C55E"></span>Guardado</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block" id="org-leftpanel">
+      <div class="card-block-title">Left Panel — paleta completa</div>
+      <div class="card-block-dims">240px × (100vh − 48px − 64px) · fijo, scroll interno</div>
+      <div class="dark-frame" style="padding:0">
+        <div style="width:500px;height:320px;overflow:hidden;border-radius:8px">
+          <img src="99b81778-4270-4baa-abb2-772d2b9349c9" style="width:1200px;height:auto;transform:scale(0.42);transform-origin:top left;display:block">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card-block" id="org-inspector">
+      <div class="card-block-title">Inspector — 3 estados</div>
+      <div class="card-block-dims">320px × (100vh − 48px − 64px) · fijo por estado</div>
+      <div class="dark-frame" style="padding:0">
+        <div style="width:487px;height:320px;overflow:hidden;border-radius:8px">
+          <img src="5e8bbec6-4560-45a0-bb73-9c1684310ce4" style="width:1160px;height:auto;transform:scale(0.42);transform-origin:top left;display:block">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card-block" id="org-carousel">
+      <div class="card-block-title">Carrusel Inferior</div>
+      <div class="card-block-dims">100% × 64px · fijo al fondo, scroll horizontal</div>
+      <div class="dark-frame" style="padding:0">
+        <div style="height:64px;width:100%;display:flex;align-items:center;gap:10px;padding:0 16px;background:#161B22;border-top:1px solid #21262D">
+          <div style="position:relative;padding:8px 16px 8px 20px;border-radius:5px;border:1px solid #FBBF24;background:rgba(251,191,36,.08)"><span style="position:absolute;top:8px;left:8px;width:6px;height:6px;border-radius:50%;background:#FBBF24"></span><div style="font-size:12px;color:#E6EDF3;font-weight:500">Home</div><div style="font-size:9px;color:#6E7681;border:1px solid #30363D;border-radius:3px;padding:1px 5px;display:inline-block;margin-top:2px">Interface</div></div>
+          <div style="padding:8px 16px;border-radius:5px;border:1px solid #30363D;background:#1C2333"><div style="font-size:12px;color:#8B949E">Login</div></div>
+          <div style="padding:8px 16px;border-radius:5px;border:1px dashed #30363D;color:#8B949E;font-size:12px">+ Nueva Pantalla</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pantallas">
+    <h2>5. Pantallas de referencia</h2>
+    <p class="intro">Miniaturas de las pantallas completas (versión estática — screenshots).</p>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <div>
+        <div class="thumb-frame"><img src="aae93e6a-f7ea-4d0f-8a48-154e6c2409fd" style="width:100%;height:100%;object-fit:cover;object-position:top"></div>
+        <div class="thumb-caption">Vista de Proyectos</div>
+      </div>
+      <div>
+        <div class="thumb-frame"><img src="92cfa320-93df-48db-8f2e-9dc77c6631f2" style="width:100%;height:100%;object-fit:cover;object-position:top"></div>
+        <div class="thumb-caption">Vista de Edición — Layout Mode</div>
+      </div>
+      <div>
+        <div class="thumb-frame"><img src="c91b247b-dff0-435b-a494-7ab29bf120f1" style="width:100%;height:100%;object-fit:cover;object-position:top"></div>
+        <div class="thumb-caption">Vista de Edición — Trigger Graph Mode</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+
+</body></html>

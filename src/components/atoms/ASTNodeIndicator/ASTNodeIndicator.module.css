@@ -1,0 +1,21 @@
+.indicator {
+  display: inline-block;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  min-width: 100px;
+  font-family: var(--font-ui);
+}
+
+.selected {
+  border-width: 2px;
+  border-style: solid;
+  border-color: var(--state-selected);
+  background: var(--state-selected-bg);
+}
+
+.label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+}

@@ -1,0 +1,70 @@
+.view {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-canvas);
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.canvas {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  position: relative;
+}
+
+.layoutCanvas {
+  padding: var(--space-8);
+}
+
+.astBody {
+  display: inline-block;
+  padding: var(--space-4);
+}
+
+.astColumn {
+  display: inline-block;
+  padding: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.astRow {
+  display: inline-block;
+  padding: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.triggerGraphHeader {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+}
+
+.triggerGraphBack {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-family: var(--font-ui);
+  padding: 0;
+}
+
+.triggerGraphBack:hover {
+  color: var(--text-primary);
+}
+
+.triggerGraphFlow {
+  height: calc(100% - 36px);
+}

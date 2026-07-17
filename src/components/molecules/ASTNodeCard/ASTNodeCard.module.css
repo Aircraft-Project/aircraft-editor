@@ -1,0 +1,58 @@
+.card {
+  position: relative;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  min-width: 150px;
+  font-family: var(--font-ui);
+}
+
+.selected {
+  border-width: 2px;
+  border-color: var(--state-selected);
+  background: var(--state-selected-bg);
+}
+
+.triggerDot {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--state-trigger-dot);
+  border: 1.5px solid var(--bg-canvas);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.typeIcon {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.typeLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.name {
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}

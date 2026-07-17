@@ -1,0 +1,25 @@
+.field {
+  display: grid;
+  gap: 4px;
+  font-family: var(--font-ui);
+}
+
+.label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.select {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface-sunken);
+  color: var(--text-primary);
+  padding: 6px 8px;
+  font-size: var(--text-base);
+  font-family: var(--font-ui);
+  outline: none;
+}
+
+.select:focus {
+  border-color: var(--accent-primary);
+}
