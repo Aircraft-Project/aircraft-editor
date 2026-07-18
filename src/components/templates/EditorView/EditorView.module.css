@@ -18,27 +18,6 @@
   position: relative;
 }
 
-.layoutCanvas {
-  padding: var(--space-8);
-}
-
-.astBody {
-  display: inline-block;
-  padding: var(--space-4);
-}
-
-.astColumn {
-  display: inline-block;
-  padding: var(--space-4);
-  margin-top: var(--space-2);
-}
-
-.astRow {
-  display: inline-block;
-  padding: var(--space-3);
-  margin-top: var(--space-2);
-}
-
 .triggerGraphHeader {
   height: 36px;
   display: flex;

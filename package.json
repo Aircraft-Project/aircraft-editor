@@ -2,6 +2,8 @@
   "name": "assembler-ide-frontend",
   "version": "0.1.0",
   "private": true,
+  "author": "Jhony Quintero",
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

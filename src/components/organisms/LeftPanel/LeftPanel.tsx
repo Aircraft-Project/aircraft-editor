@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { DragEvent, useState } from "react";
 import { ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { ComponentChip } from "@/components/atoms";
+import type { ComponentType } from "@/design/tokens";
 import { paletteByType, quickItems } from "./paletteCatalog";
 import styles from "./LeftPanel.module.css";
 
@@ -10,6 +11,11 @@ type LeftPanelProps = {
   /** Deshabilitada visualmente en Trigger Graph Mode (PRD §7.1). */
   disabled?: boolean;
 };
+
+function handleDragStart(event: DragEvent, type: ComponentType, subtype: string) {
+  event.dataTransfer.setData("application/json", JSON.stringify({ type, subtype }));
+  event.dataTransfer.effectAllowed = "copy";
+}
 
 export function LeftPanel({ disabled }: LeftPanelProps) {
   const types = Object.keys(paletteByType) as Array<keyof typeof paletteByType>;
@@ -35,7 +41,13 @@ export function LeftPanel({ disabled }: LeftPanelProps) {
         <div className={styles.sectionHeader}>RÁPIDOS</div>
         <div className={styles.sectionItems}>
           {quickItems.map((item) => (
-            <ComponentChip key={`${item.type}-${item.subtype}`} type={item.type} subtype={item.subtype} draggable />
+            <ComponentChip
+              key={`${item.type}-${item.subtype}`}
+              type={item.type}
+              subtype={item.subtype}
+              draggable
+              onDragStart={(event) => handleDragStart(event, item.type, item.subtype)}
+            />
           ))}
         </div>
       </div>
@@ -51,7 +63,13 @@ export function LeftPanel({ disabled }: LeftPanelProps) {
             {isOpen ? (
               <div className={styles.sectionItems}>
                 {paletteByType[type].map((subtype) => (
-                  <ComponentChip key={subtype} type={type} subtype={subtype} draggable />
+                  <ComponentChip
+                    key={subtype}
+                    type={type}
+                    subtype={subtype}
+                    draggable
+                    onDragStart={(event) => handleDragStart(event, type, subtype)}
+                  />
                 ))}
               </div>
             ) : null}

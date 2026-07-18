@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Background, Controls, MiniMap, ReactFlow, type Edge, type Node } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ASTNodeIndicator } from "@/components/atoms";
-import { ASTNodeCard } from "@/components/molecules";
-import { Inspector, LeftPanel, ScreensCarousel, Topbar, type Screen } from "@/components/organisms";
+import { Inspector, LayoutCanvas, LeftPanel, ScreensCarousel, Topbar, type Screen } from "@/components/organisms";
+import { findComponent, findRow } from "@/modules/screens/layoutTree";
 import { useEditorStore } from "@/store/useEditorStore";
 import styles from "./EditorView.module.css";
 
@@ -38,8 +37,27 @@ type EditorViewProps = {
 };
 
 export function EditorView({ projectName, onBackToProjects }: EditorViewProps) {
-  const { mode, activeScreenId, activeEvent, setActiveScreen, openTriggerGraph, backToLayout } = useEditorStore();
-  const [componentSelected, setComponentSelected] = useState(true);
+  const {
+    mode,
+    activeScreenId,
+    activeEvent,
+    screenTrees,
+    selection,
+    setActiveScreen,
+    openTriggerGraph,
+    backToLayout,
+    selectComponent,
+    selectRow,
+    addColumn,
+    removeColumn,
+    removeRow,
+    setRowWeight,
+    renameComponent,
+    dropOnColumn,
+    dropOnRow,
+  } = useEditorStore();
+
+  const body = screenTrees[activeScreenId];
 
   const inspectorProps = useMemo(() => {
     if (mode === "trigger-graph" && activeEvent) {
@@ -57,29 +75,45 @@ export function EditorView({ projectName, onBackToProjects }: EditorViewProps) {
       };
     }
 
-    if (componentSelected) {
-      return {
-        state: "component" as const,
-        data: {
-          name: "btnRegister",
-          type: "Button",
-          subtype: "Simple",
-          id: "btn_register",
-          properties: [{ label: "label", value: "Registrarme", required: true }],
-          observers: ["txt_status_label", "img_loading_spinner"],
-          events: [
-            { name: "ON_CLICK", configured: true },
-            { name: "ON_OBSERVE", configured: false },
-            { name: "ON_TRIGGERING", configured: false },
-            { name: "ON_CREATE", configured: false },
-          ],
-        },
-        onSelectEvent: (eventName: string) => openTriggerGraph("btnRegister", eventName),
-      };
+    if (selection?.kind === "row") {
+      const row = findRow(body, selection.id);
+      if (row) {
+        return {
+          state: "row" as const,
+          data: { id: row.id, weight: row.weight },
+          onWeightChange: (weight: number | undefined) => setRowWeight(row.id, weight),
+        };
+      }
+    }
+
+    if (selection?.kind === "component") {
+      const component = findComponent(body, selection.id);
+      if (component) {
+        return {
+          state: "component" as const,
+          data: {
+            name: component.name,
+            type: component.type,
+            subtype: component.subtype,
+            id: component.id,
+            properties: [{ label: "name", value: component.name, required: true }],
+            observers: [],
+            events: [
+              { name: "ON_CLICK", configured: false },
+              { name: "ON_OBSERVE", configured: false },
+              { name: "ON_CREATE", configured: false },
+            ],
+          },
+          onSelectEvent: (eventName: string) => openTriggerGraph(component.name, eventName),
+          onPropertyChange: (label: string, value: string) => {
+            if (label === "name") renameComponent(component.id, value);
+          },
+        };
+      }
     }
 
     return { state: "empty" as const };
-  }, [mode, activeEvent, componentSelected, openTriggerGraph]);
+  }, [mode, activeEvent, selection, body, openTriggerGraph, renameComponent, setRowWeight]);
 
   return (
     <div className={styles.view}>
@@ -90,26 +124,17 @@ export function EditorView({ projectName, onBackToProjects }: EditorViewProps) {
 
         <div className={styles.canvas}>
           {mode === "layout" ? (
-            <div className={styles.layoutCanvas}>
-              <div className={styles.astBody}>
-                <ASTNodeIndicator label="Body" color="var(--node-body)" />
-                <div className={styles.astColumn}>
-                  <ASTNodeIndicator label="Column" color="var(--node-column)" />
-                  <div className={styles.astRow}>
-                    <ASTNodeIndicator label="Row" color="var(--node-row)" />
-                    <div style={{ marginTop: 8 }}>
-                      <ASTNodeCard
-                        type="Button"
-                        name="Submit Button"
-                        selected={componentSelected}
-                        hasTriggers
-                        onClick={() => setComponentSelected(true)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <LayoutCanvas
+              body={body}
+              selection={selection}
+              onSelectComponent={selectComponent}
+              onSelectRow={selectRow}
+              onAddColumn={addColumn}
+              onRemoveColumn={removeColumn}
+              onRemoveRow={removeRow}
+              onDropOnColumn={dropOnColumn}
+              onDropOnRow={dropOnRow}
+            />
           ) : (
             <>
               <div className={styles.triggerGraphHeader}>
