@@ -2,16 +2,26 @@ import { create } from "zustand";
 import {
   BodyNode,
   DroppedPaletteItem,
-  RowNode,
+  RowHeight,
   countComponentsOfType,
+  createColumnNode,
   createComponentNode,
   createEmptyBody,
-  nextId,
+  createRowNode,
+  removeColumnDeep,
+  removeRowDeep,
+  updateColumnDeep,
+  updateComponentDeep,
+  updateRowDeep,
 } from "@/modules/screens/layoutTree";
 
 export type CanvasMode = "layout" | "trigger-graph";
 
-export type Selection = { kind: "component"; id: string } | { kind: "row"; id: string } | null;
+export type Selection =
+  | { kind: "component"; id: string }
+  | { kind: "row"; id: string }
+  | { kind: "column"; id: string }
+  | null;
 
 type EditorState = {
   mode: CanvasMode;
@@ -27,12 +37,16 @@ type EditorState = {
 
   selectComponent: (id: string) => void;
   selectRow: (id: string) => void;
+  selectColumn: (id: string) => void;
   clearSelection: () => void;
 
   addColumn: () => void;
+  addColumnToRow: (rowId: string) => void;
   removeColumn: (columnId: string) => void;
+  setColumnWeight: (columnId: string, weight: number) => void;
   removeRow: (rowId: string) => void;
   setRowWeight: (rowId: string, weight: number | undefined) => void;
+  setRowHeight: (rowId: string, height: RowHeight) => void;
   renameComponent: (componentId: string, name: string) => void;
   dropOnColumn: (columnId: string, item: DroppedPaletteItem) => void;
   dropOnRow: (rowId: string, item: DroppedPaletteItem) => void;
@@ -67,60 +81,55 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   selectComponent: (id) => set({ selection: { kind: "component", id } }),
   selectRow: (id) => set({ selection: { kind: "row", id } }),
+  selectColumn: (id) => set({ selection: { kind: "column", id } }),
   clearSelection: () => set({ selection: null }),
 
   addColumn: () =>
     set((state) => ({
-      ...updateActiveBody(state, (body) => ({
-        ...body,
-        columns: [...body.columns, { id: nextId("column"), kind: "column", rows: [] }],
-      })),
+      ...updateActiveBody(state, (body) => ({ ...body, columns: [...body.columns, createColumnNode()] })),
     })),
 
-  removeColumn: (columnId) =>
+  addColumnToRow: (rowId) =>
     set((state) => {
-      const body = state.screenTrees[state.activeScreenId];
-      if (body.columns.length <= 1) return {};
+      const newColumn = createColumnNode();
       return {
-        ...updateActiveBody(state, (b) => ({ ...b, columns: b.columns.filter((c) => c.id !== columnId) })),
-        selection: null,
+        ...updateActiveBody(state, (body) =>
+          updateRowDeep(body, rowId, (row) => ({ ...row, children: [...row.children, newColumn] }))
+        ),
+        selection: { kind: "column", id: newColumn.id },
       };
     }),
 
+  removeColumn: (columnId) =>
+    set((state) => ({
+      ...updateActiveBody(state, (body) => removeColumnDeep(body, columnId)),
+      selection: null,
+    })),
+
+  setColumnWeight: (columnId, weight) =>
+    set((state) => ({
+      ...updateActiveBody(state, (body) => updateColumnDeep(body, columnId, (column) => ({ ...column, weight }))),
+    })),
+
   removeRow: (rowId) =>
     set((state) => ({
-      ...updateActiveBody(state, (body) => ({
-        ...body,
-        columns: body.columns.map((column) => ({ ...column, rows: column.rows.filter((row) => row.id !== rowId) })),
-      })),
+      ...updateActiveBody(state, (body) => removeRowDeep(body, rowId)),
       selection: null,
     })),
 
   setRowWeight: (rowId, weight) =>
     set((state) => ({
-      ...updateActiveBody(state, (body) => ({
-        ...body,
-        columns: body.columns.map((column) => ({
-          ...column,
-          rows: column.rows.map((row) => (row.id === rowId ? { ...row, weight } : row)),
-        })),
-      })),
+      ...updateActiveBody(state, (body) => updateRowDeep(body, rowId, (row) => ({ ...row, weight }))),
+    })),
+
+  setRowHeight: (rowId, height) =>
+    set((state) => ({
+      ...updateActiveBody(state, (body) => updateRowDeep(body, rowId, (row) => ({ ...row, height }))),
     })),
 
   renameComponent: (componentId, name) =>
     set((state) => ({
-      ...updateActiveBody(state, (body) => ({
-        ...body,
-        columns: body.columns.map((column) => ({
-          ...column,
-          rows: column.rows.map((row) => ({
-            ...row,
-            components: row.components.map((component) =>
-              component.id === componentId ? { ...component, name } : component
-            ),
-          })),
-        })),
-      })),
+      ...updateActiveBody(state, (body) => updateComponentDeep(body, componentId, (component) => ({ ...component, name }))),
     })),
 
   dropOnColumn: (columnId, item) =>
@@ -128,12 +137,9 @@ export const useEditorStore = create<EditorState>((set) => ({
       const body = state.screenTrees[state.activeScreenId];
       const displayIndex = countComponentsOfType(body, item.type) + 1;
       const component = createComponentNode(item.type, item.subtype, displayIndex);
-      const newRow: RowNode = { id: nextId("row"), kind: "row", components: [component] };
+      const newRow = createRowNode([component]);
       return {
-        ...updateActiveBody(state, (b) => ({
-          ...b,
-          columns: b.columns.map((column) => (column.id === columnId ? { ...column, rows: [...column.rows, newRow] } : column)),
-        })),
+        ...updateActiveBody(state, (b) => updateColumnDeep(b, columnId, (column) => ({ ...column, rows: [...column.rows, newRow] }))),
         selection: { kind: "component", id: component.id },
       };
     }),
@@ -144,15 +150,7 @@ export const useEditorStore = create<EditorState>((set) => ({
       const displayIndex = countComponentsOfType(body, item.type) + 1;
       const component = createComponentNode(item.type, item.subtype, displayIndex);
       return {
-        ...updateActiveBody(state, (b) => ({
-          ...b,
-          columns: b.columns.map((column) => ({
-            ...column,
-            rows: column.rows.map((row) =>
-              row.id === rowId ? { ...row, components: [...row.components, component] } : row
-            ),
-          })),
-        })),
+        ...updateActiveBody(state, (b) => updateRowDeep(b, rowId, (row) => ({ ...row, children: [...row.children, component] }))),
         selection: { kind: "component", id: component.id },
       };
     }),

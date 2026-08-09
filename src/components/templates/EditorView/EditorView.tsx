@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Background, Controls, MiniMap, ReactFlow, type Edge, type Node } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Inspector, LayoutCanvas, LeftPanel, ScreensCarousel, Topbar, type Screen } from "@/components/organisms";
-import { findComponent, findRow } from "@/modules/screens/layoutTree";
+import { findColumn, findComponent, findRow } from "@/modules/screens/layoutTree";
 import { useEditorStore } from "@/store/useEditorStore";
 import styles from "./EditorView.module.css";
 
@@ -48,10 +48,14 @@ export function EditorView({ projectName, onBackToProjects }: EditorViewProps) {
     backToLayout,
     selectComponent,
     selectRow,
+    selectColumn,
     addColumn,
+    addColumnToRow,
     removeColumn,
+    setColumnWeight,
     removeRow,
     setRowWeight,
+    setRowHeight,
     renameComponent,
     dropOnColumn,
     dropOnRow,
@@ -80,8 +84,20 @@ export function EditorView({ projectName, onBackToProjects }: EditorViewProps) {
       if (row) {
         return {
           state: "row" as const,
-          data: { id: row.id, weight: row.weight },
+          data: { id: row.id, weight: row.weight, height: row.height },
           onWeightChange: (weight: number | undefined) => setRowWeight(row.id, weight),
+          onHeightChange: (height: typeof row.height) => setRowHeight(row.id, height),
+        };
+      }
+    }
+
+    if (selection?.kind === "column") {
+      const column = findColumn(body, selection.id);
+      if (column) {
+        return {
+          state: "column" as const,
+          data: { id: column.id, weight: column.weight },
+          onWeightChange: (weight: number) => setColumnWeight(column.id, weight),
         };
       }
     }
@@ -113,7 +129,7 @@ export function EditorView({ projectName, onBackToProjects }: EditorViewProps) {
     }
 
     return { state: "empty" as const };
-  }, [mode, activeEvent, selection, body, openTriggerGraph, renameComponent, setRowWeight]);
+  }, [mode, activeEvent, selection, body, openTriggerGraph, renameComponent, setRowWeight, setRowHeight, setColumnWeight]);
 
   return (
     <div className={styles.view}>
@@ -129,7 +145,9 @@ export function EditorView({ projectName, onBackToProjects }: EditorViewProps) {
               selection={selection}
               onSelectComponent={selectComponent}
               onSelectRow={selectRow}
+              onSelectColumn={selectColumn}
               onAddColumn={addColumn}
+              onAddColumnToRow={addColumnToRow}
               onRemoveColumn={removeColumn}
               onRemoveRow={removeRow}
               onDropOnColumn={dropOnColumn}

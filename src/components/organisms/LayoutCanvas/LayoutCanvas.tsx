@@ -20,29 +20,29 @@ function readDroppedItem(event: DragEvent): DroppedPaletteItem | null {
   }
 }
 
-type LayoutCanvasProps = {
-  body: BodyNode;
+/**
+ * Un solo objeto de callbacks que se pasa sin tocar en cada nivel de
+ * recursión (Column → Row → Column anidada → ...), para no tener que
+ * acordarse de reenviar cada prop individual en cada nivel.
+ */
+type TreeCallbacks = {
   selection: Selection;
   onSelectComponent: (id: string) => void;
   onSelectRow: (id: string) => void;
-  onAddColumn: () => void;
+  onSelectColumn: (id: string) => void;
+  onAddColumnToRow: (rowId: string) => void;
   onRemoveColumn: (id: string) => void;
   onRemoveRow: (id: string) => void;
   onDropOnColumn: (columnId: string, item: DroppedPaletteItem) => void;
   onDropOnRow: (rowId: string, item: DroppedPaletteItem) => void;
 };
 
-export function LayoutCanvas({
-  body,
-  selection,
-  onSelectComponent,
-  onSelectRow,
-  onAddColumn,
-  onRemoveColumn,
-  onRemoveRow,
-  onDropOnColumn,
-  onDropOnRow,
-}: LayoutCanvasProps) {
+type LayoutCanvasProps = TreeCallbacks & {
+  body: BodyNode;
+  onAddColumn: () => void;
+};
+
+export function LayoutCanvas({ body, onAddColumn, ...callbacks }: LayoutCanvasProps) {
   const [devicePresetId, setDevicePresetId] = useState(defaultDevicePresetId);
   const device = getDevicePreset(devicePresetId);
 
@@ -82,25 +82,17 @@ export function LayoutCanvas({
           </span>
         </div>
 
-        <span className={styles.hint}>Arrastra componentes desde la paleta hacia una row o hacia el área vacía de una column.</span>
+        <span className={styles.hint}>
+          Arrastra componentes desde la paleta hacia una row o hacia el área vacía de una column. Una
+          row también puede dividirse en columns con el botón &quot;+ Col&quot;.
+        </span>
       </div>
 
       <div className={styles.viewport}>
         <div className={styles.deviceFrame} style={{ width: device.width, height: device.height }}>
           <div className={styles.body}>
             {body.columns.map((column) => (
-              <ColumnView
-                key={column.id}
-                column={column}
-                selection={selection}
-                canRemove={body.columns.length > 1}
-                onSelectComponent={onSelectComponent}
-                onSelectRow={onSelectRow}
-                onRemoveColumn={onRemoveColumn}
-                onRemoveRow={onRemoveRow}
-                onDropOnColumn={onDropOnColumn}
-                onDropOnRow={onDropOnRow}
-              />
+              <ColumnView key={column.id} column={column} canRemove={body.columns.length > 1} callbacks={callbacks} />
             ))}
           </div>
         </div>
@@ -111,68 +103,55 @@ export function LayoutCanvas({
 
 type ColumnViewProps = {
   column: ColumnNode;
-  selection: Selection;
   canRemove: boolean;
-  onSelectComponent: (id: string) => void;
-  onSelectRow: (id: string) => void;
-  onRemoveColumn: (id: string) => void;
-  onRemoveRow: (id: string) => void;
-  onDropOnColumn: (columnId: string, item: DroppedPaletteItem) => void;
-  onDropOnRow: (rowId: string, item: DroppedPaletteItem) => void;
+  callbacks: TreeCallbacks;
 };
 
-function ColumnView({
-  column,
-  selection,
-  canRemove,
-  onSelectComponent,
-  onSelectRow,
-  onRemoveColumn,
-  onRemoveRow,
-  onDropOnColumn,
-  onDropOnRow,
-}: ColumnViewProps) {
+function ColumnView({ column, canRemove, callbacks }: ColumnViewProps) {
+  const { selection, onSelectColumn, onRemoveColumn, onDropOnColumn } = callbacks;
   const [dropZoneOver, setDropZoneOver] = useState(false);
+  const selected = selection?.kind === "column" && selection.id === column.id;
 
   return (
-    <div className={styles.column}>
-      <div className={styles.columnHeader}>
-        <span className={styles.columnLabel}>Column</span>
+    <div className={styles.columnSizer} style={{ flexGrow: column.weight }}>
+      <div
+        className={[styles.column, selected ? styles.columnSelected : ""].filter(Boolean).join(" ")}
+        onClick={() => onSelectColumn(column.id)}
+      >
         {canRemove ? (
-          <button type="button" className={styles.removeButton} onClick={() => onRemoveColumn(column.id)}>
+          <button
+            type="button"
+            className={styles.removeColumnButton}
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemoveColumn(column.id);
+            }}
+          >
             ×
           </button>
         ) : null}
-      </div>
 
-      {column.rows.map((row) => (
-        <RowView
-          key={row.id}
-          row={row}
-          selected={selection?.kind === "row" && selection.id === row.id}
-          selectedComponentId={selection?.kind === "component" ? selection.id : null}
-          onSelectComponent={onSelectComponent}
-          onSelectRow={onSelectRow}
-          onRemoveRow={onRemoveRow}
-          onDropOnRow={onDropOnRow}
-        />
-      ))}
+        {column.rows.map((row) => (
+          <RowView key={row.id} row={row} callbacks={callbacks} />
+        ))}
 
-      <div
-        className={[styles.dropZone, dropZoneOver ? styles.dropZoneOver : ""].filter(Boolean).join(" ")}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDropZoneOver(true);
-        }}
-        onDragLeave={() => setDropZoneOver(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDropZoneOver(false);
-          const item = readDroppedItem(event);
-          if (item) onDropOnColumn(column.id, item);
-        }}
-      >
-        Suelta un componente acá para crear una nueva row
+        <div
+          className={[styles.dropZone, dropZoneOver ? styles.dropZoneOver : ""].filter(Boolean).join(" ")}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDropZoneOver(true);
+          }}
+          onDragLeave={() => setDropZoneOver(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setDropZoneOver(false);
+            const item = readDroppedItem(event);
+            if (item) onDropOnColumn(column.id, item);
+          }}
+        >
+          Suelta un componente acá para crear una nueva row
+        </div>
       </div>
     </div>
   );
@@ -180,69 +159,91 @@ function ColumnView({
 
 type RowViewProps = {
   row: RowNode;
-  selected: boolean;
-  selectedComponentId: string | null;
-  onSelectComponent: (id: string) => void;
-  onSelectRow: (id: string) => void;
-  onRemoveRow: (id: string) => void;
-  onDropOnRow: (rowId: string, item: DroppedPaletteItem) => void;
+  callbacks: TreeCallbacks;
 };
 
-function RowView({ row, selected, selectedComponentId, onSelectComponent, onSelectRow, onRemoveRow, onDropOnRow }: RowViewProps) {
+function RowView({ row, callbacks }: RowViewProps) {
+  const {
+    selection,
+    onSelectComponent,
+    onSelectRow,
+    onAddColumnToRow,
+    onRemoveRow,
+    onDropOnRow,
+  } = callbacks;
   const [dragOver, setDragOver] = useState(false);
-  const sizingClass = row.weight !== undefined ? styles.rowWeighted : styles.rowWrap;
+  const selected = selection?.kind === "row" && selection.id === row.id;
+  const selectedComponentId = selection?.kind === "component" ? selection.id : null;
+
+  const sizingClass =
+    row.weight !== undefined ? styles.rowWeighted : row.height === "match_parent" ? styles.rowMatchParent : styles.rowWrap;
 
   return (
-    <div
-      className={[styles.row, sizingClass, selected ? styles.rowSelected : "", dragOver ? styles.rowDragOver : ""]
-        .filter(Boolean)
-        .join(" ")}
-      style={row.weight !== undefined ? { flexGrow: row.weight } : undefined}
-      onClick={() => onSelectRow(row.id)}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setDragOver(true);
-      }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        setDragOver(false);
-        const item = readDroppedItem(event);
-        if (item) onDropOnRow(row.id, item);
-      }}
-    >
-      <span className={styles.rowLabel}>Row</span>
-      {row.weight !== undefined ? <span className={styles.rowWeightBadge}>weight: {row.weight}</span> : null}
-
-      <div className={styles.rowComponents}>
-        {row.components.length === 0 ? (
-          <span className={styles.hint}>vacía</span>
-        ) : (
-          row.components.map((component) => (
-            <div
-              key={component.id}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSelectComponent(component.id);
-              }}
-            >
-              <ASTNodeCard type={component.type} name={component.name} selected={selectedComponentId === component.id} />
-            </div>
-          ))
-        )}
-      </div>
-
-      <button
-        type="button"
-        className={styles.removeButton}
+    <div className={[styles.rowSizer, sizingClass].join(" ")} style={row.weight !== undefined ? { flexGrow: row.weight } : undefined}>
+      <div
+        className={[styles.row, selected ? styles.rowSelected : "", dragOver ? styles.rowDragOver : ""].filter(Boolean).join(" ")}
         onClick={(event) => {
           event.stopPropagation();
-          onRemoveRow(row.id);
+          onSelectRow(row.id);
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setDragOver(false);
+          const item = readDroppedItem(event);
+          if (item) onDropOnRow(row.id, item);
         }}
       >
-        ×
-      </button>
+        <div className={styles.rowChildren}>
+          {row.children.length === 0 ? (
+            <span className={styles.hint}>vacía</span>
+          ) : (
+            row.children.map((child) =>
+              child.kind === "component" ? (
+                <div
+                  key={child.id}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectComponent(child.id);
+                  }}
+                >
+                  <ASTNodeCard type={child.type} name={child.name} selected={selectedComponentId === child.id} />
+                </div>
+              ) : (
+                <ColumnView key={child.id} column={child} canRemove callbacks={callbacks} />
+              )
+            )
+          )}
+        </div>
+
+        <button
+          type="button"
+          className={styles.addColumnButton}
+          title="Dividir esta row en columns"
+          onClick={(event) => {
+            event.stopPropagation();
+            onAddColumnToRow(row.id);
+          }}
+        >
+          + Col
+        </button>
+
+        <button
+          type="button"
+          className={styles.removeButton}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemoveRow(row.id);
+          }}
+        >
+          ×
+        </button>
+      </div>
     </div>
   );
 }

@@ -62,9 +62,31 @@
   min-height: 0;
 }
 
-.column {
-  flex: 1 1 0%;
+/*
+  Column sizing: siempre pondera (weight default 1),
+  Anchura% = weight*100/suma(weights).
+
+  El wrapper .columnSizer NO tiene padding/border propios y es el que lleva
+  flex-grow/flex-basis: si el padding/border vivieran en el mismo elemento
+  que crece desde flex-basis:0%, el navegador no puede reducir el área de
+  contenido por debajo de 0, así que ese padding+border termina actuando
+  como un piso mínimo por-item que distorsiona la proporción real entre
+  weights distintos (verificado: con weight 1 vs 3 sobre 347px, sin este
+  wrapper el resultado era 95.75/251.25 = ratio 2.62, no 3 — con el wrapper
+  da exactamente 86.75/260.25 = ratio 3). El look visual (borde, padding,
+  fondo) vive en .column, que solo llena el 100% del sizer.
+*/
+.columnSizer {
+  flex-shrink: 1;
+  flex-basis: 0%;
   min-width: 72px;
+  display: flex;
+}
+
+.column {
+  position: relative;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -72,20 +94,32 @@
   border-radius: var(--radius-md);
   background: var(--bg-surface-raised);
   padding: var(--space-2);
+  cursor: pointer;
 }
 
-.columnHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
+.columnSelected {
+  border-color: var(--state-selected);
+  background: var(--state-selected-bg);
 }
 
-.columnLabel {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--node-column);
+/* Flota en la esquina para no restarle espacio al contenido de la column. */
+.removeColumnButton {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 1;
+  background: var(--bg-surface-raised);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.removeColumnButton:hover {
+  color: var(--danger);
 }
 
 .removeButton {
@@ -96,15 +130,34 @@
   font-size: var(--text-sm);
   line-height: 1;
   padding: 2px 4px;
+  flex-shrink: 0;
 }
 
 .removeButton:hover {
   color: var(--danger);
 }
 
-/* Row sizing rules: sin weight = wrap content, con weight = compite por el sobrante */
+/*
+  Row sizing: sin weight se respeta height (wrap_content|match_parent); con
+  weight, height se ignora por completo y compite por el espacio sobrante
+  ponderado frente a otras rows con weight (Casuística 1/2).
+
+  Igual que con Column, el wrapper .rowSizer no tiene padding/border propios
+  cuando pondera (mismo problema: flex-basis:0% + padding/border en el mismo
+  elemento rompe la proporción exacta entre weights distintos). Wrap/match
+  parent no lo necesitan (flex-grow:0 o flex-basis:auto, sin floor forzado).
+*/
+.rowSizer {
+  display: flex;
+}
+
 .rowWrap {
   flex: 0 0 auto;
+}
+
+.rowMatchParent {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .rowWeighted {
@@ -114,6 +167,9 @@
 }
 
 .row {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -136,27 +192,37 @@
   background: rgba(59, 130, 246, 0.08);
 }
 
-.rowLabel {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--node-row);
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-.rowWeightBadge {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
-.rowComponents {
+/*
+  Los hijos de una Row (Component u otra Column) van en una sola línea, sin
+  wrap: si una Column-hija necesita repartir el ancho *sobrante* de la Row
+  por weight, un flex-wrap podría mandarla a otra línea y romper el cálculo
+  proporcional (mismo problema documentado para .columnSizer/.rowSizer).
+*/
+.rowChildren {
   display: flex;
   flex-direction: row;
+  align-items: stretch;
   gap: var(--space-2);
-  flex-wrap: wrap;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.addColumnButton {
+  background: none;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.addColumnButton:hover {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
 }
 
 .dropZone {
