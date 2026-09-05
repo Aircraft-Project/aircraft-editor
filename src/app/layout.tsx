@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Assembler IDE",
-  description: "Herramienta visual para construir apps Aircraft — layout y trigger graphs sin YAML",
+  title: "Aircraft Editor",
+  description: "Editor visual para diseñar y crear aplicaciones multiplataforma con Aircraft.",
 };
 
 type RootLayoutProps = {

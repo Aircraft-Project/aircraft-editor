@@ -14,6 +14,11 @@
   color: var(--danger);
 }
 
+.inputWrapper {
+  position: relative;
+  width: 100%;
+}
+
 .input {
   width: 100%;
   border-radius: var(--radius-sm);
@@ -27,12 +32,41 @@
   transition: border-color 0.12s ease;
 }
 
+.inputWithLeftIcon {
+  padding-left: 38px;
+}
+
+.inputWithRightElement {
+  padding-right: 46px;
+}
+
 .input:focus {
   border-color: var(--accent-primary);
 }
 
 .inputError {
   border-color: var(--danger);
+}
+
+.leftIcon,
+.rightElement {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+}
+
+.leftIcon {
+  left: 12px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.rightElement {
+  right: 8px;
 }
 
 .message {
@@ -42,4 +76,10 @@
 
 .messageError {
   color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input {
+    transition: none;
+  }
 }

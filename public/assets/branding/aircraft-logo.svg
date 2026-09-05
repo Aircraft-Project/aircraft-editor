@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 220">
+  <defs>
+    <linearGradient id="leg-left" x1="95" y1="105" x2="170" y2="10" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#087BFF"/>
+      <stop offset="1" stop-color="#8AEAFF"/>
+    </linearGradient>
+    <linearGradient id="leg-right" x1="170" y1="12" x2="228" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#33DFFF"/>
+      <stop offset="1" stop-color="#087BFF"/>
+    </linearGradient>
+    <linearGradient id="bridge" x1="117" y1="89" x2="206" y2="89" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A65EC"/>
+      <stop offset=".52" stop-color="#20E3FF"/>
+      <stop offset="1" stop-color="#0B73F6"/>
+    </linearGradient>
+    <filter id="soft-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <g transform="translate(48 8)" filter="url(#soft-glow)">
+    <path d="M72 111 136 15c7-11 23-11 30 1l13 23c-15-4-29 3-38 17l-36 56Z" fill="url(#leg-left)"/>
+    <path d="m154 16 65 96h-34l-45-68c-6-9-3-21 6-27 2-1 5-2 8-1Z" fill="url(#leg-right)"/>
+    <path d="M105 88c15-24 37-37 59-37 20 0 39 11 54 31l-17 26c-11-17-23-26-37-26-15 0-28 10-41 29Z" fill="url(#bridge)"/>
+    <circle cx="72" cy="111" r="15" fill="#18DAF5"/>
+    <circle cx="219" cy="111" r="15" fill="#18DAF5"/>
+    <circle cx="196" cy="28" r="11" fill="#18DAF5"/>
+  </g>
+
+  <text x="210" y="168" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="43" font-weight="700" letter-spacing="5" text-anchor="middle">AIRCRAFT</text>
+  <text x="210" y="205" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="400" letter-spacing="15" text-anchor="middle">EDITOR</text>
+</svg>
