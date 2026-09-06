@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useRef, useState, type FormEvent } from "react";
-import { setSession } from "@/modules/auth/session";
-import type { AuthSession, LoginCredentials, LoginErrors } from "@/modules/auth/types";
+import { setSession, type AuthSession } from "@/modules/session";
+import type { LoginCredentials, LoginErrors } from "@/modules/auth/types";
 import { hasLoginErrors, normalizeLoginCredentials, validateLogin } from "@/modules/auth/validation";
-import { AuthServiceError, type AuthService } from "@/services/auth";
+import { AuthServiceError, type AuthService } from "../application/authService";
 
 const INITIAL_CREDENTIALS: LoginCredentials = {
   username: "",

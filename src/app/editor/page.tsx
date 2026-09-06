@@ -1,10 +1,26 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { EditorView } from "@/components/templates";
 
-export default function EditorPage() {
+function EditorPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId") ?? undefined;
 
-  return <EditorView projectName="Mi App E-Commerce" onBackToProjects={() => router.push("/projects")} />;
+  return (
+    <EditorView
+      projectId={projectId}
+      onBackToProjects={() => router.push("/projects")}
+    />
+  );
+}
+
+export default function EditorPage() {
+  return (
+    <Suspense fallback={null}>
+      <EditorPageContent />
+    </Suspense>
+  );
 }

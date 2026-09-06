@@ -1,0 +1,229 @@
+.content {
+  position: relative;
+  min-width: 0;
+  min-height: 100%;
+  padding: clamp(2rem, 4vw, 3.2rem)
+    clamp(1.4rem, 3.2vw, 3.2rem)
+    3rem;
+  overflow: hidden;
+}
+
+.brandDecoration {
+  position: absolute;
+  z-index: -1;
+  top: 1rem;
+  right: -14rem;
+  width: min(55vw, 760px);
+  height: auto;
+  opacity: 0.09;
+  filter: drop-shadow(0 0 42px rgba(8, 123, 255, 0.48));
+  transform: rotate(-7deg);
+  pointer-events: none;
+  user-select: none;
+}
+
+.heading {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 1.5rem;
+}
+
+.heading h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(2rem, 4.2vw, 2.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.heading p {
+  margin: 0.55rem 0 0;
+  color: rgba(191, 220, 255, 0.78);
+  font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+}
+
+.statsGrid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.1rem;
+  max-width: 1100px;
+  margin-bottom: 1.65rem;
+}
+
+.projectGrid,
+.skeletonGrid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.skeleton {
+  min-height: 278px;
+  border: 1px solid rgba(65, 144, 235, 0.18);
+  border-radius: 15px;
+  background:
+    linear-gradient(
+      100deg,
+      rgba(6, 27, 56, 0.7) 25%,
+      rgba(17, 61, 107, 0.72) 42%,
+      rgba(6, 27, 56, 0.7) 62%
+    );
+  background-size: 240% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.feedback {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  min-height: 220px;
+  place-content: center;
+  padding: 2rem;
+  border: 1px solid rgba(59, 148, 246, 0.22);
+  border-radius: 15px;
+  color: rgba(224, 239, 255, 0.8);
+  text-align: center;
+  background: rgba(5, 24, 49, 0.48);
+}
+
+.feedback p {
+  margin: 0;
+}
+
+.feedback button {
+  min-height: 42px;
+  padding: 0 1.2rem;
+  border: 1px solid rgba(22, 217, 255, 0.42);
+  border-radius: 10px;
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  background: rgba(8, 123, 255, 0.2);
+  cursor: pointer;
+}
+
+.feedback button:hover {
+  background: rgba(8, 123, 255, 0.3);
+}
+
+.feedback button:focus-visible {
+  outline: 2px solid #16d9ff;
+  outline-offset: 2px;
+}
+
+.emptyState {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.emptyCopy {
+  display: grid;
+  min-height: 278px;
+  place-content: center;
+  padding: 2rem;
+  border: 1px solid rgba(59, 148, 246, 0.2);
+  border-radius: 15px;
+  text-align: center;
+  background: rgba(5, 24, 49, 0.42);
+}
+
+.emptyCopy h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.emptyCopy p {
+  margin: 0.55rem 0 0;
+  color: rgba(211, 231, 255, 0.72);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (max-width: 1500px) {
+  .projectGrid,
+  .skeletonGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .projectGrid,
+  .skeletonGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .brandDecoration {
+    right: -10rem;
+    width: 70vw;
+  }
+}
+
+@media (max-width: 760px) {
+  .content {
+    padding: 1.65rem 1rem 2rem;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .brandDecoration {
+    top: 10rem;
+    right: -13rem;
+    width: 92vw;
+    opacity: 0.06;
+  }
+
+  .emptyState {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .projectGrid,
+  .skeletonGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding-inline: 0.85rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

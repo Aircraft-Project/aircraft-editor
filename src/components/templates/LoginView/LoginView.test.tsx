@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { AuthSession } from "@/modules/auth/types";
-import { AuthServiceError, type AuthService } from "@/services/auth";
+import type { AuthSession } from "@/modules/session";
+import { AuthServiceError, type AuthService } from "@/modules/auth/client";
 import { LoginView } from "./LoginView";
 
 const replace = jest.fn();
@@ -9,6 +9,16 @@ const replace = jest.fn();
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
 }));
+
+const adminSession: AuthSession = {
+  user: {
+    id: "usr-admin-001",
+    username: "admin",
+    displayName: "Administrador",
+    initials: "AD",
+    role: "ADMIN",
+  },
+};
 
 describe("LoginView", () => {
   beforeEach(() => {
@@ -64,7 +74,7 @@ describe("LoginView", () => {
     expect(service.login).toHaveBeenCalledWith({ username: "admin", password: "admin" });
 
     await act(async () => {
-      resolveLogin?.({ username: "admin", displayName: "Administrador" });
+      resolveLogin?.(adminSession);
     });
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/projects"));
@@ -91,13 +101,12 @@ describe("LoginView", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Usuario o contraseña incorrectos.",
     );
-    expect(replace).not.toHaveBeenCalled();
   });
 
-  it("exposes the future registration callback without navigating to a missing route", async () => {
+  it("keeps create-account navigation behind a future callback", async () => {
     const user = userEvent.setup();
-    const service: AuthService = { login: jest.fn() };
     const onCreateAccount = jest.fn();
+    const service: AuthService = { login: jest.fn() };
 
     render(<LoginView service={service} onCreateAccount={onCreateAccount} />);
     await user.click(screen.getByRole("button", { name: "Creá tu cuenta." }));

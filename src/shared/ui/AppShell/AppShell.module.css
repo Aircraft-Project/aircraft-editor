@@ -1,0 +1,80 @@
+.shell {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template:
+    "header header" auto
+    "sidebar main" minmax(0, 1fr)
+    / 116px minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  color: #fff;
+  background:
+    radial-gradient(circle at 87% 11%, rgba(11, 99, 246, 0.2), transparent 30rem),
+    radial-gradient(circle at 69% 86%, rgba(8, 123, 255, 0.1), transparent 34rem),
+    linear-gradient(145deg, #020b1a 0%, #04132b 55%, #020b1a 100%);
+}
+
+.shell::after {
+  position: fixed;
+  z-index: -1;
+  right: -8rem;
+  bottom: -14rem;
+  width: min(58vw, 58rem);
+  aspect-ratio: 1;
+  border: 1px solid rgba(22, 217, 255, 0.05);
+  border-radius: 48% 52% 56% 44%;
+  background: linear-gradient(145deg, rgba(8, 123, 255, 0.05), transparent 60%);
+  transform: rotate(-18deg);
+  content: "";
+  pointer-events: none;
+}
+
+.header {
+  z-index: 20;
+  grid-area: header;
+  min-width: 0;
+}
+
+.sidebar {
+  z-index: 10;
+  grid-area: sidebar;
+  min-width: 0;
+  border-right: 1px solid rgba(96, 170, 255, 0.13);
+  background: rgba(2, 11, 26, 0.58);
+  backdrop-filter: blur(18px);
+}
+
+.main {
+  z-index: 1;
+  grid-area: main;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .shell {
+    grid-template:
+      "header header" auto
+      "sidebar main" minmax(0, 1fr)
+      / 82px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template:
+      "header" auto
+      "sidebar" auto
+      "main" minmax(0, 1fr)
+      / minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 18;
+    border-right: 0;
+    border-bottom: 1px solid rgba(96, 170, 255, 0.14);
+  }
+}

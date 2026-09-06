@@ -32,11 +32,12 @@ const demoEdges: Edge[] = [
 ];
 
 type EditorViewProps = {
-  projectName: string;
+  projectId?: string;
   onBackToProjects?: () => void;
 };
 
-export function EditorView({ projectName, onBackToProjects }: EditorViewProps) {
+export function EditorView({ projectId, onBackToProjects }: EditorViewProps) {
+  const projectName = projectId ?? "Mi App E-Commerce";
   const {
     mode,
     activeScreenId,

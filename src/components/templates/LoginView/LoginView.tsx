@@ -4,8 +4,11 @@ import { useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { LoginForm } from "@/components/organisms";
-import { useLogin } from "@/modules/auth/hooks";
-import { authService, type AuthService } from "@/services/auth";
+import {
+  authService,
+  useLogin,
+  type AuthService,
+} from "@/modules/auth/client";
 import styles from "./LoginView.module.css";
 
 type LoginViewProps = {

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="aircraft-mark-title">
+  <title id="aircraft-mark-title">Aircraft</title>
+  <defs>
+    <linearGradient id="aircraft-mark-gradient" x1="10" y1="54" x2="52" y2="8" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#087BFF"/>
+      <stop offset=".55" stop-color="#16D9FF"/>
+      <stop offset="1" stop-color="#4AA3FF"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#aircraft-mark-gradient)" d="M8.1 51.8 27.4 13a6.2 6.2 0 0 1 5.5-3.4h7.4L27.8 38.1 8.1 51.8Z"/>
+  <path fill="#087BFF" d="m27.8 38.1 12.5-28.5 7.8 38.8-9.8-14.8-10.5 4.5Z"/>
+  <path fill="#16D9FF" d="m18.8 45.1 19.5-11.5 9.8 14.8-19.4-6.2-9.9 2.9Z"/>
+</svg>

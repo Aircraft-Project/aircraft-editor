@@ -1,0 +1,239 @@
+.backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 7, 18, 0.74);
+  backdrop-filter: blur(8px);
+}
+
+.dialog {
+  width: min(100%, 520px);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  border: 1px solid rgba(22, 217, 255, 0.36);
+  border-radius: 18px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 80% 0, rgba(8, 123, 255, 0.12), transparent 44%),
+    #06162c;
+  box-shadow:
+    0 26px 80px rgba(0, 0, 0, 0.5),
+    0 0 36px rgba(8, 123, 255, 0.1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.3rem 1.4rem;
+  border-bottom: 1px solid rgba(91, 163, 244, 0.16);
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.header button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: rgba(231, 243, 255, 0.78);
+  background: transparent;
+  cursor: pointer;
+}
+
+.header button:hover:not(:disabled) {
+  background: rgba(52, 133, 224, 0.13);
+}
+
+.form {
+  display: grid;
+  gap: 1.15rem;
+  padding: 1.4rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.field label {
+  color: rgba(239, 247, 255, 0.92);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border: 1px solid rgba(98, 164, 239, 0.34);
+  border-radius: 11px;
+  outline: 0;
+  color: #fff;
+  font: inherit;
+  background: rgba(3, 15, 34, 0.72);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.field input {
+  min-height: 48px;
+  padding: 0 0.9rem;
+}
+
+.field textarea {
+  min-height: 108px;
+  padding: 0.8rem 0.9rem;
+  resize: vertical;
+}
+
+.field input:hover,
+.field textarea:hover {
+  border-color: rgba(22, 217, 255, 0.47);
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: #16d9ff;
+  box-shadow: 0 0 0 3px rgba(22, 217, 255, 0.1);
+}
+
+.field input[aria-invalid="true"],
+.field textarea[aria-invalid="true"] {
+  border-color: rgba(255, 191, 71, 0.72);
+}
+
+.error,
+.generalError {
+  margin: 0;
+  color: #ffd17a;
+  font-size: 0.78rem;
+}
+
+.generalError {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(255, 193, 78, 0.22);
+  border-radius: 9px;
+  background: rgba(138, 91, 15, 0.12);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.cancelButton,
+.createButton {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 11px;
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cancelButton {
+  border: 1px solid rgba(105, 169, 241, 0.3);
+  background: rgba(34, 82, 137, 0.16);
+}
+
+.createButton {
+  border: 1px solid rgba(22, 217, 255, 0.55);
+  background: linear-gradient(100deg, #12cce8, #087bff);
+  box-shadow: 0 8px 24px rgba(8, 123, 255, 0.18);
+}
+
+.cancelButton:hover:not(:disabled) {
+  border-color: rgba(22, 217, 255, 0.46);
+  background: rgba(34, 101, 178, 0.2);
+}
+
+.createButton:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.cancelButton:focus-visible,
+.createButton:focus-visible,
+.header button:focus-visible {
+  outline: 2px solid #16d9ff;
+  outline-offset: 2px;
+}
+
+.cancelButton:disabled,
+.createButton:disabled,
+.header button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.spinner {
+  animation: spin 800ms linear infinite;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .dialog {
+    width: 100%;
+    max-height: calc(100dvh - 1rem);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .header,
+  .form {
+    padding-inline: 1rem;
+  }
+
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field input,
+  .field textarea {
+    transition: none;
+  }
+
+  .spinner {
+    animation-duration: 1.5s;
+  }
+}

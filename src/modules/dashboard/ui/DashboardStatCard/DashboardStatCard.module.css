@@ -1,0 +1,90 @@
+.card {
+  --stat-color: #2b9cff;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1.15rem;
+  min-width: 0;
+  min-height: 104px;
+  padding: 1.15rem 1.2rem;
+  overflow: hidden;
+  border: 1px solid rgba(63, 154, 255, 0.3);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(9, 35, 70, 0.86), rgba(5, 20, 43, 0.72));
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.02),
+    0 16px 34px rgba(0, 0, 0, 0.12);
+}
+
+.card[data-kind="editing"] {
+  --stat-color: #16d9ff;
+}
+
+.card[data-kind="published"] {
+  --stat-color: #16e6b0;
+}
+
+.icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--stat-color) 20%, transparent);
+  border-radius: 15px;
+  color: var(--stat-color);
+  background: color-mix(in srgb, var(--stat-color) 15%, #061731);
+  box-shadow: inset 0 0 22px color-mix(in srgb, var(--stat-color) 12%, transparent);
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.content strong {
+  color: #fff;
+  font-size: clamp(1.8rem, 3vw, 2.2rem);
+  line-height: 1;
+}
+
+.content span {
+  color: rgba(211, 231, 255, 0.7);
+  font-size: 0.94rem;
+}
+
+.sparkline {
+  position: absolute;
+  right: -0.5rem;
+  bottom: 0.75rem;
+  width: 34%;
+  min-width: 92px;
+  height: 42px;
+  color: var(--stat-color);
+  opacity: 0.76;
+}
+
+.sparkline path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (max-width: 480px) {
+  .card {
+    min-height: 88px;
+    padding: 0.9rem;
+  }
+
+  .icon {
+    width: 54px;
+    height: 54px;
+  }
+}

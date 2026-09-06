@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import type { LoginErrorResponse, LoginSuccessResponse } from "@/modules/auth/types";
-import { hasLoginErrors, normalizeLoginCredentials, validateLogin } from "@/modules/auth/validation";
+import { authenticateMockUser } from "@/modules/auth/server";
+import type { LoginErrorResponse, LoginSuccessResponse } from "@/modules/auth";
+import { hasLoginErrors, normalizeLoginCredentials, validateLogin } from "@/modules/auth";
 
 function invalidRequest(message = "Solicitud de autenticación inválida.") {
   return NextResponse.json<LoginErrorResponse>({ success: false, message }, { status: 400 });
@@ -40,8 +41,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // Temporary credential boundary. Replace this branch when the real auth backend is connected.
-  if (credentials.username !== "admin" || credentials.password !== "admin") {
+  const session = authenticateMockUser(credentials);
+
+  if (!session) {
     return NextResponse.json<LoginErrorResponse>(
       { success: false, message: "Usuario o contraseña incorrectos." },
       { status: 401 },
@@ -50,9 +52,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json<LoginSuccessResponse>({
     success: true,
-    user: {
-      username: "admin",
-      displayName: "Administrador",
-    },
+    data: { session },
   });
 }

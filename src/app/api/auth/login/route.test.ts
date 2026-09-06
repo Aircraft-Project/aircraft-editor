@@ -1,5 +1,7 @@
 /** @jest-environment node */
 
+jest.mock("server-only", () => ({}));
+
 import { POST } from "./route";
 
 function createRequest(body: unknown): Request {
@@ -17,8 +19,41 @@ describe("POST /api/auth/login", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       success: true,
-      user: { username: "admin", displayName: "Administrador" },
+      data: {
+        session: {
+          user: {
+            id: "usr-admin-001",
+            username: "admin",
+            displayName: "Administrador",
+            initials: "AD",
+            role: "ADMIN",
+          },
+        },
+      },
     });
+  });
+
+  it("authenticates developer credentials", async () => {
+    const response = await POST(createRequest({ username: "developer", password: "developer" }));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+
+    expect(body).toEqual({
+      success: true,
+      data: {
+        session: {
+          user: {
+            id: "usr-developer-001",
+            username: "developer",
+            displayName: "Desarrollador",
+            initials: "DE",
+            role: "DEVELOPER",
+          },
+        },
+      },
+    });
+    expect(JSON.stringify(body)).not.toContain("password");
   });
 
   it("rejects incorrect credentials without revealing which value failed", async () => {

@@ -1,3 +1,5 @@
+import type { AuthSession } from "@/modules/session";
+
 export const LOGIN_USERNAME_MAX_LENGTH = 64;
 
 export type LoginCredentials = {
@@ -10,14 +12,11 @@ export type LoginErrors = {
   password?: string;
 };
 
-export type AuthSession = {
-  username: string;
-  displayName: string;
-};
-
 export type LoginSuccessResponse = {
   success: true;
-  user: AuthSession;
+  data: {
+    session: AuthSession;
+  };
 };
 
 export type LoginErrorResponse = {
@@ -27,3 +26,5 @@ export type LoginErrorResponse = {
 };
 
 export type LoginApiResponse = LoginSuccessResponse | LoginErrorResponse;
+
+export type { AuthSession } from "@/modules/session";

@@ -1,0 +1,71 @@
+.card {
+  display: flex;
+  min-width: 0;
+  min-height: 278px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 1.5rem;
+  border: 2px dashed rgba(21, 136, 255, 0.85);
+  border-radius: 15px;
+  color: #fff;
+  font: inherit;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(8, 123, 255, 0.13), transparent 48%),
+    rgba(5, 23, 48, 0.46);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.card:hover {
+  border-color: #16d9ff;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(22, 217, 255, 0.15), transparent 50%),
+    rgba(6, 30, 61, 0.64);
+  transform: translateY(-2px);
+}
+
+.card:focus-visible {
+  outline: 2px solid #16d9ff;
+  outline-offset: 3px;
+}
+
+.icon {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  border: 3px solid #1697ff;
+  border-radius: 50%;
+  color: #28b7ff;
+  background: rgba(7, 53, 112, 0.72);
+  box-shadow:
+    0 0 18px rgba(8, 123, 255, 0.46),
+    inset 0 0 18px rgba(8, 123, 255, 0.22);
+}
+
+.card strong {
+  margin-top: 0.25rem;
+  font-size: 1.16rem;
+}
+
+.card > span:last-child {
+  color: rgba(212, 231, 255, 0.73);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+}
