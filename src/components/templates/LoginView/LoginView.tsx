@@ -14,22 +14,27 @@ import styles from "./LoginView.module.css";
 type LoginViewProps = {
   service?: AuthService;
   onCreateAccount?: () => void;
+  registrationSucceeded?: boolean;
 };
 
-export function LoginView({ service = authService, onCreateAccount }: LoginViewProps) {
+export function LoginView({
+  service = authService,
+  onCreateAccount,
+  registrationSucceeded = false,
+}: LoginViewProps) {
   const router = useRouter();
 
-  const handleAuthenticated = useCallback(
-    () => {
-      router.replace("/projects");
-    },
-    [router],
-  );
+  const handleAuthenticated = useCallback(() => {
+    router.replace("/projects");
+  }, [router]);
 
   const handleCreateAccount = useCallback(() => {
-    // TODO(auth): connect this callback when the registration module is available.
-    onCreateAccount?.();
-  }, [onCreateAccount]);
+    if (onCreateAccount) {
+      onCreateAccount();
+      return;
+    }
+    router.push("/register");
+  }, [onCreateAccount, router]);
 
   const {
     credentials,
@@ -71,6 +76,7 @@ export function LoginView({ service = authService, onCreateAccount }: LoginViewP
           errors={errors}
           formError={formError}
           isSubmitting={isSubmitting}
+          registrationSucceeded={registrationSucceeded}
           onCredentialChange={updateCredential}
           onSubmit={submit}
           onCreateAccount={handleCreateAccount}

@@ -1,5 +1,10 @@
 import { LoginView } from "@/components/templates";
 
-export default function LoginPage() {
-  return <LoginView />;
+type LoginPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
+  return <LoginView registrationSucceeded={params.registered === "1"} />;
 }

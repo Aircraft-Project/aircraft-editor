@@ -5,9 +5,10 @@ import { AuthServiceError, type AuthService } from "@/modules/auth/client";
 import { LoginView } from "./LoginView";
 
 const replace = jest.fn();
+const push = jest.fn();
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ replace }),
+  useRouter: () => ({ replace, push }),
 }));
 
 const adminSession: AuthSession = {
@@ -23,6 +24,7 @@ const adminSession: AuthSession = {
 describe("LoginView", () => {
   beforeEach(() => {
     replace.mockClear();
+    push.mockClear();
     window.sessionStorage.clear();
   });
 
@@ -103,7 +105,7 @@ describe("LoginView", () => {
     );
   });
 
-  it("keeps create-account navigation behind a future callback", async () => {
+  it("supports a custom create-account callback without navigation", async () => {
     const user = userEvent.setup();
     const onCreateAccount = jest.fn();
     const service: AuthService = { login: jest.fn() };
@@ -112,6 +114,21 @@ describe("LoginView", () => {
     await user.click(screen.getByRole("button", { name: "Creá tu cuenta." }));
 
     expect(onCreateAccount).toHaveBeenCalledTimes(1);
-    expect(replace).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("navigates directly to public registration and shows the completion message", async () => {
+    const user = userEvent.setup();
+    const service: AuthService = { login: jest.fn() };
+
+    render(<LoginView service={service} registrationSucceeded />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Cuenta creada correctamente. Ya puedes iniciar sesión.",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Creá tu cuenta." }));
+
+    expect(push).toHaveBeenCalledWith("/register");
+    expect(screen.queryByText(/No fue posible iniciar el registro/)).not.toBeInTheDocument();
   });
 });

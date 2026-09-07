@@ -10,6 +10,7 @@ type LoginFormProps = {
   credentials: LoginCredentials;
   errors: LoginErrors;
   formError?: string;
+  registrationSucceeded?: boolean;
   isSubmitting: boolean;
   onCredentialChange: (field: keyof LoginCredentials, value: string) => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
@@ -20,6 +21,7 @@ export function LoginForm({
   credentials,
   errors,
   formError,
+  registrationSucceeded,
   isSubmitting,
   onCredentialChange,
   onSubmit,
@@ -29,6 +31,11 @@ export function LoginForm({
 
   return (
     <form className={styles.form} onSubmit={onSubmit} noValidate>
+      {registrationSucceeded ? (
+        <p className={styles.successMessage} role="status">
+          Cuenta creada correctamente. Ya puedes iniciar sesión.
+        </p>
+      ) : null}
       <Input
         id="username"
         name="username"
@@ -79,12 +86,7 @@ export function LoginForm({
       />
 
       <div className={styles.submitArea}>
-        {formError ? (
-          <p className={styles.formError} role="alert" aria-live="polite">
-            {formError}
-          </p>
-        ) : null}
-
+        {formError ? <p className={styles.formError} role="alert" aria-live="polite">{formError}</p> : null}
         <Button
           type="submit"
           size="lg"

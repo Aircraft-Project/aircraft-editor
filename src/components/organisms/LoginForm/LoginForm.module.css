@@ -207,3 +207,5 @@
     animation-duration: 1.5s;
   }
 }
+
+.successMessage { margin: -4px 0 0; padding: 10px 12px; border: 1px solid rgba(30, 230, 255, .35); border-radius: 10px; color: #8cf3ff; background: rgba(16, 155, 190, .1); font-size: 14px; text-align: center; }
