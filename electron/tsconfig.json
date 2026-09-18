@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "allowJs": false,
+    "incremental": false,
+    "noEmit": false,
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "outDir": "../.electron",
+    "rootDir": ".",
+    "sourceMap": true,
+    "types": ["node", "electron"]
+  },
+  "include": ["main/**/*.ts", "preload/**/*.ts"]
+}

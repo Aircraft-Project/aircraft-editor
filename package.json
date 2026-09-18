@@ -2,10 +2,17 @@
   "name": "assembler-ide-frontend",
   "version": "0.1.0",
   "private": true,
+  "main": ".electron/main/main.js",
   "author": "Jhony Quintero",
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "next dev",
+    "electron:dev": "npm run electron:build && node electron/scripts/dev.mjs",
+    "electron:build": "tsc -p electron/tsconfig.json",
+    "electron:check": "npm run electron:build && electron --version",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -30,6 +37,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "electron": "44.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "jest": "^30.2.0",
