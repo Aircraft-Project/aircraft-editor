@@ -1,0 +1,4 @@
+{
+  "componentTypes": ["TextField", "Button", "Catalog", "TextLabel", "IMAGE", "ICON", "Fractal"],
+  "triggerTypes": ["ApiService", "Math", "Conditional", "ConditionalPlus", "ConditionalSwitcher", "Navigation", "JsonBuilder", "JsonMapper", "JsonEngine", "Shooter", "FetchContextArg", "StateComp", "StringEngine"]
+}

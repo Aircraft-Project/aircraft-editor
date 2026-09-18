@@ -1,0 +1,616 @@
+[
+  {
+    "type": "TextField",
+    "description": "Editable text input field for capturing user input. The subtype defines the keyboard type and formatting behavior shown to the user.",
+    "subtypes": [
+      "Basic",
+      "Email",
+      "Password",
+      "Numeric",
+      "Currency",
+      "DatePicker",
+      "Dropdown",
+      "DynamicDropdown"
+    ],
+    "subtypeDescriptions": {
+      "Basic": "Free-form text. Standard alphanumeric keyboard. No format restrictions.",
+      "Email": "Optimized for email input. Shows keyboard with @ key and enables format validation.",
+      "Password": "Masks input with asterisks. Use for passwords and sensitive data.",
+      "Numeric": "Accepts numbers only. Shows numeric keyboard. No currency formatting.",
+      "Currency": "Accepts monetary values. Shows numeric keyboard with decimal and currency symbol support.",
+      "DatePicker": "Opens a native OS date picker dialog instead of the keyboard.",
+      "Dropdown": "Dropdown with a static set of options defined at build time. Use when all choices are known ahead of time and do not require an API call (for API-driven options, use DynamicDropdown instead). Each option has a machine-readable key, a human-readable label, and an optional data map. Both `options` and `delivery` are required.",
+      "DynamicDropdown": "Dropdown whose options are loaded at runtime from an external API — not defined at build time. You provide a field-mapping template (`options`) that tells the component which fields of each API-response item to use as key and label, instead of enumerating values. Requires a trigger chain on `on-create-event` to fetch and load options (typical pattern: ApiService → JsonMapper → StateComp with `comp --opt replof`). Both `options` and `delivery` are required."
+    },
+    "contexts": [
+      "interface"
+    ],
+    "effectiveEvents": [
+      "on-create-event",
+      "on-resume-event",
+      "on-pause-event",
+      "on-destroy-event",
+      "on-change-event",
+      "on-observe-event",
+      "on-triggering-event"
+    ],
+    "properties": [
+      {
+        "name": "hint",
+        "valueType": "string",
+        "required": false,
+        "default": null,
+        "description": "Placeholder text shown when the field is empty. Disappears when the user starts typing."
+      },
+      {
+        "name": "label",
+        "valueType": "string",
+        "required": false,
+        "default": null,
+        "description": "Floating label that identifies the field. Always visible, even when the field has content."
+      },
+      {
+        "name": "defaultText",
+        "valueType": "string",
+        "required": false,
+        "default": null,
+        "description": "Initial value of the field when the screen loads. Can be overwritten by the user or via SetValue/StateComp triggers."
+      },
+      {
+        "name": "minLength",
+        "valueType": "int",
+        "required": false,
+        "default": null,
+        "applicableSubtypes": [
+          "Basic"
+        ],
+        "description": "Minimum character count. If the field is non-empty and text length is below this value, an error is shown. Applies to Basic subtype only."
+      },
+      {
+        "name": "maxLength",
+        "valueType": "int",
+        "required": false,
+        "default": null,
+        "applicableSubtypes": [
+          "Basic"
+        ],
+        "description": "Maximum character count. Input is silently truncated to this limit — no error is set. Applies to Basic subtype only."
+      },
+      {
+        "name": "maxLines",
+        "valueType": "int",
+        "required": false,
+        "default": null,
+        "applicableSubtypes": [
+          "Basic"
+        ],
+        "description": "Maximum number of visible lines. Text beyond this limit scrolls out of view but is not truncated. Applies to Basic subtype only."
+      },
+      {
+        "name": "dateFormat",
+        "valueType": "string",
+        "required": false,
+        "default": "DD_MM_YYYY",
+        "applicableSubtypes": [
+          "DatePicker"
+        ],
+        "description": "Controls how the selected date is displayed in the text field. Only applies to subtype DatePicker. Does not affect how incoming SetValue arguments are parsed (always DD_MM_YYYY).",
+        "enum": [
+          {
+            "value": "DD_MM_YYYY",
+            "example": "25/03/2025"
+          },
+          {
+            "value": "MM_DD_YYYY",
+            "example": "03/25/2025"
+          },
+          {
+            "value": "YYYY_MM_DD",
+            "example": "2025-03-25"
+          },
+          {
+            "value": "DD_MM_YYYY_DASH",
+            "example": "25-03-2025"
+          },
+          {
+            "value": "DD_MMM_YYYY",
+            "example": "25 Mar 2025"
+          },
+          {
+            "value": "MMMM_DD_YYYY",
+            "example": "March 25, 2025"
+          }
+        ],
+        "example": "dateFormat: MM_DD_YYYY"
+      },
+      {
+        "name": "delivery",
+        "valueType": "string",
+        "required": true,
+        "default": null,
+        "applicableSubtypes": [
+          "Dropdown",
+          "DynamicDropdown"
+        ],
+        "description": "Controls what value is stored in the field when the user selects an option. Must be one of: Model, Key, or Label.",
+        "enum": [
+          {
+            "value": "Model",
+            "description": "Stores the full option object { entry: { key, label }, data: {...} }. Use when downstream triggers need both the identifier and extra data fields."
+          },
+          {
+            "value": "Key",
+            "description": "Stores only entry.key as a string. Use when only the machine-readable identifier is needed."
+          },
+          {
+            "value": "Label",
+            "description": "Stores only entry.label as a string. Use when only the human-readable display value is needed."
+          }
+        ],
+        "example": "delivery: Key"
+      },
+      {
+        "name": "options",
+        "valueType": "array",
+        "required": true,
+        "default": null,
+        "applicableSubtypes": [
+          "Dropdown"
+        ],
+        "description": "Static list of selectable options defined at build time (for API-driven options, use subtype DynamicDropdown instead). Each option has: entry.key (String, required — machine-readable identifier), entry.label (String, required — human-readable display text), data (Object, optional — arbitrary key-value map, only accessible when delivery is Model). Example with data:\n\noptions:\n  - entry:\n      key: AR\n      label: Argentina\n    data:\n      dialCode: \"+54\"\n  - entry:\n      key: MX\n      label: Mexico\n    data:\n      dialCode: \"+52\"",
+        "example": "options:\n  - entry:\n      key: yes\n      label: \"Yes\"\n  - entry:\n      key: no\n      label: \"No\"",
+        "fields": [
+          {
+            "name": "entry",
+            "valueType": "object",
+            "required": true,
+            "description": "Identifier pair for one option. Required: the decoder throws 'Dropdown entry missing key/label field' without it.",
+            "fields": [
+              {
+                "name": "key",
+                "valueType": "string",
+                "required": true,
+                "description": "Machine-readable identifier for this option. Stored in the field when delivery is Key."
+              },
+              {
+                "name": "label",
+                "valueType": "string",
+                "required": true,
+                "description": "Human-readable display text for this option. Stored in the field when delivery is Label."
+              }
+            ]
+          },
+          {
+            "name": "data",
+            "valueType": "object",
+            "required": false,
+            "default": null,
+            "description": "Arbitrary opaque payload attached to this option, only accessible when delivery is Model. Free-form: the runtime holds it as a raw JsonElement (DropdownOptionX.data), so no inner shape is declared."
+          }
+        ]
+      },
+      {
+        "name": "options",
+        "valueType": "object",
+        "required": true,
+        "default": null,
+        "applicableSubtypes": [
+          "DynamicDropdown"
+        ],
+        "description": "Field-mapping template that tells the component which fields of each data-source item to use as the option key and label. This is NOT a list of values — it is a mapping specification. `entry.key`: name of the field to use as unique identifier. `entry.label`: name of the field to use as display text. Both support dot-notation for nested fields (e.g. `ability.name` reads the `name` field inside the `ability` object of each item). `data`: optional field name to attach as opaque payload (null if not needed). Example — given API items like {\"ability\": {\"name\": \"limber\"}, \"slot\": 1}, mapping `key: slot` and `label: ability.name` produces options with key=1/label=\"limber\".",
+        "example": "options:\n  entry:\n    key: slot\n    label: ability.name",
+        "fields": [
+          {
+            "name": "entry",
+            "valueType": "object",
+            "required": true,
+            "description": "Field-mapping pair. Required: the decoder throws 'DynamicDropdown entry missing key/label field' without it.",
+            "fields": [
+              {
+                "name": "key",
+                "valueType": "string",
+                "required": true,
+                "description": "Name of the data-source field to use as the unique identifier. Supports dot-notation for nested fields."
+              },
+              {
+                "name": "label",
+                "valueType": "string",
+                "required": true,
+                "description": "Name of the data-source field to use as the display text. Supports dot-notation for nested fields."
+              }
+            ]
+          },
+          {
+            "name": "data",
+            "valueType": "object",
+            "required": false,
+            "default": null,
+            "description": "Optional opaque payload to attach to each generated option. Free-form: the runtime holds it as a nullable raw JsonElement (DropdownOptionReferenceX.data: JsonElement?), so no inner shape is declared. NOTE it is an object, not a string."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "Button",
+    "description": "Interactive element the user taps to trigger an action. This is the ONLY component with on-clic-event. Use it whenever the user needs to deliberately fire an action (submit, confirm, navigate).",
+    "subtypes": [
+      "Simple"
+    ],
+    "subtypeDescriptions": {
+      "Simple": "Standard text button. Only available subtype."
+    },
+    "contexts": [
+      "interface"
+    ],
+    "effectiveEvents": [
+      "on-create-event",
+      "on-resume-event",
+      "on-pause-event",
+      "on-destroy-event",
+      "on-observe-event",
+      "on-triggering-event",
+      "on-clic-event"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "valueType": "string",
+        "required": true,
+        "description": "Text visible on the button. Should describe the action it executes (e.g. 'Confirm', 'Send', 'Back')."
+      }
+    ]
+  },
+  {
+    "type": "Catalog",
+    "description": "Dynamic list that renders a collection of catalog-items using a 3-way data-binding contract:\n(1) Catalog.properties.itemView MUST match the CatalogItem body viewType (set via set_body_properties)\n(2) Catalog.properties.data keys MUST match component 'name' fields inside that CatalogItem\n(3) Catalog.properties.data values are JSON field paths from the upstream data source (post-JsonMapper)\n\n--- DATA BINDING: How the Catalog connects to CatalogItem components ---\n\nWhen the Catalog is populated with data, EACH ITEM in the array is bound to the CatalogItem layout:\n- For EVERY component inside the CatalogItem, the runtime looks up data[componentName]\n- If found, that value (which is a JSON field path) is extracted from the current item's data object\n- If NOT found, the component uses its fallback property (e.g. imageUrl for IMAGE, defaultText for TextLabel)\n\nExample with Pokémon:\n\nCatalogItem 'PokemonCard' layout:\n  - IMAGE component, name: \"sprite\", imageUrl: \"https://placeholder.com/default.png\"\n  - TextLabel component, name: \"name\", defaultText: \"Unknown\"\n  - TextLabel component, name: \"id\"\n\nCatalog data map:\n  data:\n    sprite: \"sprites.front_default\"    ← JSON field path\n    name: \"name\"                        ← JSON field path\n    id: \"id\"                            ← JSON field path\n\nWhen API returns [{\"name\": \"Pikachu\", \"id\": 25, \"sprites\": {\"front_default\": \"https://...pikachu.png\"}}, ...]:\n  - For item 1: IMAGE renders sprites.front_default (\"https://...pikachu.png\"), TextLabel renders name (\"Pikachu\"), etc.\n  - The imageUrl fallback and defaultText are ONLY shown if the JSON paths return null.\n\nBehavior DIFFERS from regular interfaces:\n- In an INTERFACE: IMAGE.imageUrl and TextLabel.defaultText are DIRECT values, not fallbacks\n- In a CATALOG-ITEM: they are OVERRIDDEN by the Catalog's data map at runtime\n\nThe Catalog starts empty — data is loaded dynamically at runtime via a trigger chain.\n\nQuick Start YAML — basic Catalog:\n\n  type: Catalog\n  subtype: Dynamic\n  properties:\n    itemView: \"PokemonCard\"\n    orientation: Vertical\n    data:\n      pokeName: \"name\"\n      pokeURL: \"url\"\n  name: \"catalog-poke-items\"\n  identifier: \"4232j42nd2y3y74fh\"\n\nQuick Start YAML — Catalog with trigger chain (canonical pattern):\n\n  type: Catalog\n  subtype: Dynamic\n  properties:\n    itemView: \"PokemonCard\"\n    orientation: Vertical\n    data:\n      pokeName: \"name\"\n      pokeURL: \"url\"\n  name: \"catalog-poke-items\"\n  identifier: \"4232j42nd2y3y74fh\"\n  triggers:\n    on-create-event:\n      rootVertex: \"api_call_1\"\n      vertices:\n        - type: ApiService\n          identifier: \"api_call_1\"\n          name: \"apiService1\"\n          properties:\n            baseUrl: \"https://pokeapi.co/api/v2/\"\n            endpoint: \"pokemon?limit=20&offset=0\"\n            method: GET\n        - type: JsonMapper\n          identifier: \"json_mapper_1\"\n          name: \"jsonMapper1\"\n          properties:\n            valueOf: api_call_1\n            type: Array\n            reference: \"body.results\"\n        - type: StateComp\n          identifier: \"state_update_1\"\n          name: \"stateUpdate1\"\n          properties:\n            command: \"comp --datl replof json_mapper_1\"",
+    "subtypes": [
+      "Dynamic"
+    ],
+    "subtypeDescriptions": {
+      "Dynamic": "Loads and renders items dynamically from a data source connected at runtime via trigger chain (ApiService → JsonMapper → StateComp). The Catalog iterates over the array and applies the data map to bind JSON fields to CatalogItem component names."
+    },
+    "contexts": [
+      "interface"
+    ],
+    "effectiveEvents": [
+      "on-create-event",
+      "on-resume-event",
+      "on-pause-event",
+      "on-destroy-event",
+      "on-change-event",
+      "on-observe-event",
+      "on-triggering-event",
+      "on-item-clic-event",
+      "on-scroll-ending-event"
+    ],
+    "properties": [
+      {
+        "name": "itemView",
+        "valueType": "string",
+        "required": true,
+        "description": "Name of the CatalogItem that defines the visual layout for each item in the collection. MUST match exactly the 'viewType' declared in the CatalogItem's body properties (set via set_body_properties). Example: 'PokemonCard'. Create the CatalogItem first using create_catalog_item, then reference it here."
+      },
+      {
+        "name": "orientation",
+        "valueType": "enum:Vertical,Horizontal",
+        "required": true,
+        "description": "Scroll direction of the catalog container. 'Vertical' renders a vertically scrollable list (LazyColumn). 'Horizontal' renders a horizontally scrollable list / carousel (LazyRow)."
+      },
+      {
+        "name": "data",
+        "valueType": "map<string,string>",
+        "required": false,
+        "default": null,
+        "description": "Data-binding map that connects the Catalog's data source to the CatalogItem's components. CRITICAL CONTRACT: Each KEY must match the 'name' of a component inside the referenced CatalogItem. Each VALUE is the JSON field path in each data object (after JsonMapper extraction). At runtime, for EACH component in EACH catalog item, the Catalog looks up data[componentName] and uses that JSON path to extract the value from the item's data. If the lookup succeeds, that value is displayed — component properties like 'imageUrl' and 'defaultText' are used only as fallbacks if the JSON path returns null. Example: {\"pokeName\": \"name\", \"pokeSprite\": \"sprites.front_default\", \"pokeId\": \"id\"} binds JSON fields 'name', 'sprites.front_default', and 'id' to components named 'pokeName', 'pokeSprite', and 'pokeId' respectively. When omitted, the runtime passes through the entire data model directly — top-level fields are passed as-is; nested objects and arrays become their string representation."
+      },
+      {
+        "name": "dataKey",
+        "valueType": "string",
+        "required": false,
+        "default": null,
+        "applicableSubtypes": [
+          "Dynamic"
+        ],
+        "description": "Optional unique identifier key for deduplication during append operations on a DynamicCatalog component. The value MUST be one of the keys defined in the 'data' property map (e.g. if data has {\"userId\": \"id\"}, set dataKey to \"userId\"). When set: each incoming item during --datl append is checked — if map[dataKey] is non-null and an existing item has the same value, the existing item is replaced in-place; if no match, the item is appended. If map[dataKey] resolves to null for a specific incoming item, that item is always appended without dedup. When omitted: all append operations add items unconditionally — no deduplication occurs, and the caller is responsible for data congruence. Has no effect on --datl replof (full replacement). Only applicable to subtype Dynamic.",
+        "example": "dataKey: userId"
+      },
+      {
+        "name": "carousel",
+        "valueType": "object",
+        "required": false,
+        "default": null,
+        "applicableSubtypes": [
+          "Dynamic"
+        ],
+        "description": "Optional layout configuration for horizontal carousel (Orientation: Horizontal). When omitted, defaults to itemSize=3 and spaceBetween=8. Ignored for Vertical orientation.",
+        "fields": [
+          {
+            "name": "itemSize",
+            "valueType": "int",
+            "required": true,
+            "description": "Number of visible items across the carousel width. E.g. 3 shows three equal-width items side by side."
+          },
+          {
+            "name": "spaceBetween",
+            "valueType": "int",
+            "required": true,
+            "description": "Gap in dp between adjacent carousel items. E.g. 8 places 8dp spacing between each item."
+          }
+        ]
+      },
+      {
+        "name": "lastVisibleItemCount",
+        "valueType": "int",
+        "required": false,
+        "default": "4",
+        "applicableSubtypes": [
+          "Dynamic"
+        ],
+        "description": "Number of items from the end of the list that triggers the on-scroll-ending-event. When the last visible item index >= totalItems - lastVisibleItemCount, the event fires. Default is 4. Only meaningful when on-scroll-ending-event is configured."
+      }
+    ]
+  },
+  {
+    "type": "TextLabel",
+    "description": "Read-only text display component. The user CANNOT edit it. Use it for titles, subtitles, descriptions, computed values, or any text the system shows but the user does not input. Available in both interfaces and catalog-items.\n\nDYNAMIC BINDING IN CATALOG-ITEMS: When a TextLabel is placed inside a CatalogItem, its text is driven by the Catalog's 'data' map — NOT by the 'defaultText' property. The runtime resolves the text using the component's 'name' as the lookup key: data[componentName]. This means the component 'name' MUST appear as a key in the parent Catalog's 'data' map, and the corresponding value must be a JSON field path that resolves to a string.\n\nExample — Pokémon card CatalogItem with dynamic text:\n  CatalogItem layout:\n    - TextLabel component, name: \"pokeName\", defaultText: \"Loading...\"  ← fallback only\n    - TextLabel component, name: \"pokeId\"\n  Parent Catalog 'data' map:\n    pokeName: \"name\"    ← JSON path whose value is the pokemon name string\n    pokeId: \"id\"\n  At runtime: the TextLabel renders data[\"pokeName\"] = name from each API item.\n  The 'defaultText' property is only used as a fallback when data[\"pokeName\"] is null.",
+    "subtypes": [
+      "Label"
+    ],
+    "subtypeDescriptions": {
+      "Label": "Standard read-only text. Only available subtype."
+    },
+    "contexts": [
+      "interface",
+      "catalog-item"
+    ],
+    "effectiveEvents": [
+      "on-create-event",
+      "on-resume-event",
+      "on-pause-event",
+      "on-destroy-event",
+      "on-observe-event",
+      "on-triggering-event"
+    ],
+    "properties": [
+      {
+        "name": "defaultText",
+        "valueType": "string",
+        "required": true,
+        "description": "Text to display. In an interface context this is the literal text shown. In a catalog-item context this is a fallback — at runtime it is overridden by the Catalog's 'data' map keyed by this component's 'name'. Can be updated at runtime via SetValue or StateComp triggers."
+      },
+      {
+        "name": "color",
+        "valueType": "string",
+        "required": false,
+        "default": null,
+        "description": "Text color as a hex string WITHOUT the '#' prefix. The required format depends on the document context:\n\n- INTERFACE context: use 6-digit RRGGBB (e.g. 'E50914' for red, 'FFFFFF' for white). The runtime prepends '#' and calls toColorInt() — 8-digit values will produce wrong colors because toColorInt() interprets them as #AARRGGBB.\n- CATALOG_ITEM context: use 8-digit AARRGGBB (e.g. 'FFE50914' for opaque red, 'FFFFFFFF' for opaque white). The runtime calls Color(0xAARRGGBB) directly — the first 2 digits are the alpha channel, always use 'FF' for fully opaque.\n\nWhen null, the theme's default text color is used."
+      },
+      {
+        "name": "textStyle",
+        "valueType": "string",
+        "required": false,
+        "default": null,
+        "description": "Typography token reference. Use format '$typography.<name>' (e.g. '$typography.titleLarge'). When null or the token is unrecognized, silently falls back to bodyLarge."
+      },
+      {
+        "name": "maxLines",
+        "valueType": "int",
+        "required": false,
+        "default": null,
+        "description": "Maximum number of lines to display. Text that exceeds this limit is ellipsized. When null, no line limit is applied."
+      },
+      {
+        "name": "textAlign",
+        "valueType": "string",
+        "required": false,
+        "default": "Start",
+        "description": "Horizontal alignment of the text. Must be one of: Start, End, Center, Justify, Left, Right.",
+        "enum": [
+          {
+            "value": "Start"
+          },
+          {
+            "value": "End"
+          },
+          {
+            "value": "Center"
+          },
+          {
+            "value": "Justify"
+          },
+          {
+            "value": "Left"
+          },
+          {
+            "value": "Right"
+          }
+        ]
+      },
+      {
+        "name": "format",
+        "valueType": "string",
+        "required": false,
+        "default": "Default",
+        "description": "Text casing transformation applied at render time. Only applies at component initialization — cannot be changed via SetValue after load. Must be one of: Default (no transformation), TitleCase (first letter of each word capitalized), SentenceCase (first letter of first word capitalized).",
+        "enum": [
+          {
+            "value": "Default",
+            "description": "No transformation."
+          },
+          {
+            "value": "TitleCase",
+            "description": "First letter of each word capitalized."
+          },
+          {
+            "value": "SentenceCase",
+            "description": "First letter of the first word capitalized."
+          }
+        ]
+      },
+      {
+        "name": "paddingHorizontal",
+        "valueType": "int",
+        "required": false,
+        "default": null,
+        "description": "Horizontal padding in dp applied to both left and right sides of the text. When null, no extra padding is added."
+      },
+      {
+        "name": "paddingVertical",
+        "valueType": "int",
+        "required": false,
+        "default": null,
+        "description": "Vertical padding in dp applied to both top and bottom of the text. When null, no extra padding is added."
+      }
+    ]
+  },
+  {
+    "type": "IMAGE",
+    "description": "Displays an image loaded from a remote URL or local resource. Use it for avatars, banners, product photos, or any static or dynamic visual content. Available in both interfaces and catalog-items.\n\nDYNAMIC BINDING IN CATALOG-ITEMS: When an IMAGE is placed inside a CatalogItem, its value is driven by the Catalog's 'data' map — NOT by the 'imageUrl' property. The runtime resolves the image URL using the component's 'name' as the lookup key: data[componentName]. This means the component 'name' MUST appear as a key in the parent Catalog's 'data' map, and the corresponding value must be a JSON field path that resolves to an image URL string.\n\nExample — Pokémon card CatalogItem with dynamic image:\n  CatalogItem layout:\n    - IMAGE component, name: \"pokeSprite\", imageUrl: \"https://placeholder.com/img.png\"  ← fallback only\n    - TextLabel component, name: \"pokeName\"\n  Parent Catalog 'data' map:\n    pokeSprite: \"sprites.front_default\"   ← JSON path whose value is the image URL\n    pokeName: \"name\"\n  At runtime: the IMAGE renders data[\"pokeSprite\"] = sprites.front_default from each API item.\n  The 'imageUrl' property is only used as a fallback when data[\"pokeSprite\"] is null.",
+    "subtypes": [
+      "Basic"
+    ],
+    "subtypeDescriptions": {
+      "Basic": "Standard image with URL and scale support. Only available subtype."
+    },
+    "contexts": [
+      "interface",
+      "catalog-item"
+    ],
+    "effectiveEvents": [
+      "on-create-event",
+      "on-resume-event",
+      "on-pause-event",
+      "on-destroy-event",
+      "on-observe-event",
+      "on-triggering-event"
+    ],
+    "properties": [
+      {
+        "name": "imageUrl",
+        "valueType": "string",
+        "required": true,
+        "description": "REQUIRED. Fallback image URL used when the component is outside a Catalog, or when the Catalog's data map does not provide a value for this component's name. Required even inside a CatalogItem, where it is only a fallback: the decoder throws without it, and the runtime model holds a non-null String. In a CatalogItem, the actual runtime URL comes from the Catalog 'data' map keyed by this component's 'name' — imageUrl is only shown when that lookup returns null. Supported formats: HTTPS/HTTP remote URLs ('https://cdn.example.com/photo.jpg'), file URIs ('file:///data/data/com.app/images/photo.png'), Android content URIs ('content://media/external/images/media/123'), asset URIs ('file:///android_asset/images/default.png'), and resource URIs ('android.resource://com.app/drawable/ic_placeholder'). Can also be updated at runtime via StateComp: use '--val repl <url>' to replace with a literal URL, or '--val replof <argId>' to replace with a value from the execution context."
+      },
+      {
+        "name": "contentDescription",
+        "valueType": "string",
+        "required": false,
+        "description": "Accessibility label (equivalent to HTML alt text). Important for screen readers."
+      },
+      {
+        "name": "contentScale",
+        "valueType": "string",
+        "required": false,
+        "default": "Fit",
+        "description": "Controls how the image is scaled to fit its container. Defaults to 'Fit' when omitted or unrecognized.",
+        "enum": [
+          {
+            "value": "Fit",
+            "description": "Scale uniformly to fit inside the container, preserving aspect ratio. Empty space may appear on sides or top/bottom (letterboxing). Use for logos or images where distortion is unacceptable."
+          },
+          {
+            "value": "Crop",
+            "description": "Scale uniformly to fill the container, preserving aspect ratio. The image is center-cropped — no empty space, but edges may be clipped. Use for avatars, banners, or hero images."
+          },
+          {
+            "value": "FillBounds",
+            "description": "Stretch to fill the container exactly, ignoring aspect ratio. The image may appear distorted. Use only when the image and container share the same aspect ratio."
+          }
+        ],
+        "example": "contentScale: Crop"
+      },
+      {
+        "name": "size",
+        "valueType": "int",
+        "required": false,
+        "description": "Size in dp (density-independent pixels). Applies to both width and height for a fixed square size."
+      },
+      {
+        "name": "cornerRadius",
+        "valueType": "int",
+        "required": false,
+        "default": null,
+        "description": "Corner radius in dp used to clip the image into a rounded rectangle. The clip is applied before size. When null, no clipping is applied and corners remain sharp. For a circular image, set cornerRadius to half of size (for example: size 120 with cornerRadius 60).",
+        "example": 8
+      }
+    ]
+  },
+  {
+    "type": "ICON",
+    "description": "Displays a vector icon from the design system icon catalog. More efficient than IMAGE for icons because it uses scalable vectors with no quality loss. Available in both interfaces and catalog-items.",
+    "subtypes": [
+      "Basic"
+    ],
+    "subtypeDescriptions": {
+      "Basic": "Standard icon with tint and size support. Only available subtype."
+    },
+    "contexts": [
+      "interface",
+      "catalog-item"
+    ],
+    "effectiveEvents": [
+      "on-create-event",
+      "on-resume-event",
+      "on-pause-event",
+      "on-destroy-event",
+      "on-observe-event",
+      "on-triggering-event"
+    ],
+    "properties": [
+      {
+        "name": "iconName",
+        "valueType": "string",
+        "required": true,
+        "description": "REQUIRED. Name of the icon to display. Uses Material Icons names (e.g. 'home', 'search', 'arrow_back', 'favorite'). See full catalog at fonts.google.com/icons."
+      },
+      {
+        "name": "contentDescription",
+        "valueType": "string",
+        "required": false,
+        "description": "Accessibility label describing what the icon represents. Important for screen readers."
+      },
+      {
+        "name": "tint",
+        "valueType": "string",
+        "required": false,
+        "description": "Color applied to the icon. Accepts hex format (e.g. '#FF0000') or design system color token."
+      },
+      {
+        "name": "size",
+        "valueType": "int",
+        "required": false,
+        "description": "Icon size in dp. Typical values: 16, 24 (default), 32, 48."
+      }
+    ]
+  },
+  {
+    "type": "Fractal",
+    "description": "Embeds a full interface inside another interface as if it were a reusable component (a composed widget). It has its own ISOLATED context — ContextParameter inside a Fractal reads/writes the Fractal's own context, NOT the parent's. The Fractal can emit values to the parent via FractalValueChangeEvent and can be observed by other components in the parent interface. Use it to encapsulate reusable UI logic (e.g. a custom date selector, an address form, a search bar with suggestions).",
+    "subtypes": [
+      "Standard"
+    ],
+    "subtypeDescriptions": {
+      "Standard": "Standard embedded Fractal. Only available subtype."
+    },
+    "contexts": [
+      "interface"
+    ],
+    "effectiveEvents": [
+      "on-create-event",
+      "on-resume-event",
+      "on-pause-event",
+      "on-destroy-event",
+      "on-observe-event",
+      "on-triggering-event"
+    ],
+    "properties": [
+      {
+        "name": "interface",
+        "valueType": "string",
+        "required": true,
+        "description": "Required. The destination identifier of the interface to embed. The referenced interface must exist in the project. IMPORTANT: context inside the Fractal is isolated — it cannot access the parent interface's context.\n\n  properties:\n    interface: \"detail\"\n\nThe wire key is 'interface'. The runtime field is named 'interfaceReference' only because 'interface' is a Kotlin keyword; both decoders read the wire key 'interface' directly."
+      }
+    ]
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "context": "interface",
+    "allowedComponentTypes": [
+      "TextField",
+      "Button",
+      "Catalog",
+      "TextLabel",
+      "IMAGE",
+      "ICON",
+      "Fractal"
+    ],
+    "supportsTriggers": true,
+    "supportsObservers": true
+  },
+  {
+    "context": "catalog-item",
+    "allowedComponentTypes": [
+      "TextLabel",
+      "IMAGE",
+      "ICON"
+    ],
+    "supportsTriggers": false,
+    "supportsObservers": false
+  }
+]

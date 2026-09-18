@@ -1,0 +1,729 @@
+[
+  {
+    "type": "ApiService",
+    "description": "Calls an HTTP endpoint (GET or POST). The full HTTP response is emitted as a JSON arg into the trigger chain context under this vertex's identifier — downstream vertices (e.g. JsonMapper) can reference it via valueOf.\n\nOUTPUT ENVELOPE (ALWAYS — this never changes):\n  {\n    \"code\": <HTTP status as Number>,\n    \"body\": { ...full HTTP response body... }\n  }\n\nCRITICAL: ALWAYS prefix any reference path with 'body.' when accessing the response payload.\nExample — PokéAPI returns { count, next, previous, results[] } → use reference: 'body.results', NOT 'results'.\nOmitting 'body.' causes SILENT FAILURE: validation passes, no crash, but the downstream component receives null/empty data.\n\nQuick Start — GET request:\n\n  type: ApiService\n  identifier: \"api_call_1\"\n  name: \"apiService1\"\n  properties:\n    baseUrl: https://pokeapi.co/api/v2/\n    endpoint: pokemon\n    method: GET\n\n  # Downstream JsonMapper to extract the results array:\n  type: JsonMapper\n  identifier: \"json_mapper_1\"\n  properties:\n    valueOf: api_call_1\n    type: Array\n    reference: \"body.results\"   # <-- 'body.' prefix is REQUIRED\n\nQuick Start — POST with Var body:\n\n  type: ApiService\n  identifier: \"api_call_1\"\n  name: \"apiService1\"\n  properties:\n    baseUrl: https://pokeapi.co/api/v2/\n    endpoint: pokemon/ditto\n    method: POST\n    data:\n      type: Var\n      valueOf: \"jsonBuilderVertexId\"\n      jsonRef: \"optional.path\"",
+    "requiredProperties": [
+      {
+        "name": "baseUrl",
+        "valueType": "string",
+        "required": true,
+        "description": "Base URL of the API. MUST end with a trailing slash '/'. Example: 'https://pokeapi.co/api/v2/'"
+      },
+      {
+        "name": "endpoint",
+        "valueType": "string",
+        "required": true,
+        "description": "API endpoint path appended to baseUrl. MUST NOT start with '/'. Example: 'pokemon/ditto'"
+      },
+      {
+        "name": "method",
+        "valueType": "string",
+        "required": true,
+        "description": "HTTP method. Values: GET, POST (uppercase). When method is POST, a sibling 'data' property is REQUIRED in this same properties block with the request body definition."
+      }
+    ],
+    "optionalProperties": [
+      {
+        "name": "headers",
+        "valueType": "map<string,string>",
+        "required": false,
+        "description": "Optional map of HTTP headers to include in the request. Authored as a YAML mapping of header name to header value, NOT as a scalar string.\n\n  headers:\n    Authorization: \"Bearer __token__\"\n    Accept: application/json"
+      },
+      {
+        "name": "data",
+        "valueType": "object",
+        "required": false,
+        "description": "POST request body definition. REQUIRED when method is POST, ignored for GET.\n\nDiscriminator field 'type' selects the body strategy:\n- Body: builds a JSON object from a model map where values reference arg identifiers. Supports nested objects.\n- Auto: collects ALL args currently in the trigger chain context and builds a JSON object automatically.\n- Var: takes a single arg (via valueOf) that MUST already be a JSON object — typically the result of a JsonMapper or JsonBuilder vertex.\n\nQuick Start — POST with Body:\n\n  data:\n    type: Body\n    model:\n      param1: \"argIdentifierA\"\n      param2: \"argIdentifierB\"\n      nested:\n        param3: \"argIdentifierC\"\n\nQuick Start — POST with Auto:\n\n  data:\n    type: Auto\n\nQuick Start — POST with Var:\n\n  data:\n    type: Var\n    valueOf: \"jsonBuilderVertexId\"",
+        "discriminatorField": "type",
+        "variants": [
+          {
+            "discriminatorValue": "Body",
+            "fields": [
+              {
+                "name": "model",
+                "valueType": "object",
+                "required": true,
+                "description": "Key-value map defining the POST body shape. Keys are JSON field names, values are arg identifiers resolved from trigger chain context. Supports nested objects for complex payloads."
+              },
+              {
+                "name": "jsonRef",
+                "valueType": "string",
+                "required": false,
+                "description": "Optional. Dot-notation path to walk into the built JSON object before sending (see JsonWalker). If omitted, the full object is sent."
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "Auto",
+            "fields": [
+              {
+                "name": "jsonRef",
+                "valueType": "string",
+                "required": false,
+                "description": "Optional. Dot-notation path to walk into the auto-built JSON object before sending."
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "Var",
+            "fields": [
+              {
+                "name": "valueOf",
+                "valueType": "string",
+                "required": true,
+                "description": "REQUIRED. Identifier of a vertex in the chain context whose result is a JSON object (typically a JsonMapper or JsonBuilder vertex)."
+              },
+              {
+                "name": "jsonRef",
+                "valueType": "string",
+                "required": false,
+                "description": "Optional. Dot-notation path to walk into the referenced JSON object before sending."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "Math",
+    "description": "Evaluates a KaTeX-style mathematical expression and writes the numeric result to an arg. Use this trigger for arithmetic computations, formula evaluation, or derived numeric values in the UI.",
+    "requiredProperties": [
+      {
+        "name": "expression",
+        "valueType": "string",
+        "required": true,
+        "description": "KaTeX polynomial expression. Only +/- operators, implicit multiplication (2x = 2*x), \\frac{n}{d} for division, base^{exp} for power. Variables: single-char (x, y) or @named (@total). Use validate_expression to check syntax or get_expression_syntax('Math') for full grammar."
+      }
+    ],
+    "optionalProperties": [
+      {
+        "name": "variables",
+        "valueType": "list<object>",
+        "required": false,
+        "discriminatorField": "type",
+        "fields": [
+          {
+            "name": "key",
+            "valueType": "string",
+            "required": true
+          },
+          {
+            "name": "type",
+            "valueType": "enum:Const,Var,CalcVar",
+            "required": true
+          }
+        ],
+        "variants": [
+          {
+            "discriminatorValue": "Const",
+            "fields": [
+              {
+                "name": "value",
+                "valueType": "number",
+                "required": true
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "Var",
+            "fields": [
+              {
+                "name": "valueOf",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "CalcVar",
+            "fields": [
+              {
+                "name": "expression",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "config",
+        "valueType": "object",
+        "required": false,
+        "fields": [
+          {
+            "name": "engine",
+            "valueType": "enum:DOUBLE,BIG_DECIMAL",
+            "required": false
+          },
+          {
+            "name": "rounding",
+            "valueType": "object",
+            "required": false,
+            "fields": [
+              {
+                "name": "scale",
+                "valueType": "int",
+                "required": true
+              },
+              {
+                "name": "mode",
+                "valueType": "enum:UP,DOWN,CEILING,FLOOR,HALF_UP,HALF_DOWN,HALF_EVEN,UNNECESSARY",
+                "required": false,
+                "default": "HALF_UP"
+              }
+            ]
+          },
+          {
+            "name": "riskFlags",
+            "valueType": "object",
+            "required": false,
+            "fields": [
+              {
+                "name": "allowDoubleFallback",
+                "valueType": "boolean",
+                "required": false
+              },
+              {
+                "name": "strictBigDecimal",
+                "valueType": "boolean",
+                "required": false
+              },
+              {
+                "name": "emitWarnings",
+                "valueType": "boolean",
+                "required": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "resultMode",
+        "valueType": "enum:LEGACY_DOUBLE,DECIMAL",
+        "required": false,
+        "default": "LEGACY_DOUBLE"
+      }
+    ]
+  },
+  {
+    "type": "Conditional",
+    "description": "Evaluates a boolean expression and produces the result as a boolean argument. Use this trigger to compute a boolean value from args or constants that other triggers can consume downstream in the execution graph.",
+    "requiredProperties": [
+      {
+        "name": "expression",
+        "valueType": "string",
+        "required": true,
+        "description": "Boolean expression. Operators: >, <, ==, !=. Logical: AND, OR. NOT goes BEFORE operator (@x NOT == 5). Variables: @name. Strings: 'quoted'. Use validate_expression to check syntax or get_expression_syntax('Conditional') for full grammar."
+      }
+    ],
+    "optionalProperties": [
+      {
+        "name": "variables",
+        "valueType": "list<object>",
+        "required": false,
+        "discriminatorField": "type",
+        "fields": [
+          {
+            "name": "key",
+            "valueType": "string",
+            "required": true
+          },
+          {
+            "name": "type",
+            "valueType": "enum:Const,Var,CalcVar",
+            "required": true
+          }
+        ],
+        "variants": [
+          {
+            "discriminatorValue": "Const",
+            "fields": [
+              {
+                "name": "value",
+                "valueType": "number",
+                "required": true
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "Var",
+            "fields": [
+              {
+                "name": "valueOf",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "CalcVar",
+            "fields": [
+              {
+                "name": "expression",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "ConditionalPlus",
+    "description": "Evaluates an IF/THEN/ELSE expression and applies component state commands (color, message, disabled, visibility, value) directly to the component that fired the trigger. Use this trigger when a condition should immediately mutate the component's own UI state — all within a single expression, without requiring additional trigger vertices in the execution graph.",
+    "requiredProperties": [
+      {
+        "name": "expression",
+        "valueType": "string",
+        "required": true,
+        "description": "IF/THEN/ELSE with comp commands. Format: IF (condition) THEN comp flags... [ELSE comp flags...]. Target is implicit. Flags: -c, -m, -d, -v, --val, -o, --datl. Use validate_expression to check syntax or get_expression_syntax('ConditionalPlus') for full grammar and flag reference. (--datl modifies the data list of a DynamicCatalog component: replof replaces, append adds items)"
+      }
+    ],
+    "optionalProperties": [
+      {
+        "name": "variables",
+        "valueType": "list<object>",
+        "required": false,
+        "discriminatorField": "type",
+        "fields": [
+          {
+            "name": "key",
+            "valueType": "string",
+            "required": true
+          },
+          {
+            "name": "type",
+            "valueType": "enum:Const,Var,CalcVar",
+            "required": true
+          }
+        ],
+        "variants": [
+          {
+            "discriminatorValue": "Const",
+            "fields": [
+              {
+                "name": "value",
+                "valueType": "number",
+                "required": true
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "Var",
+            "fields": [
+              {
+                "name": "valueOf",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "CalcVar",
+            "fields": [
+              {
+                "name": "expression",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "ConditionalSwitcher",
+    "description": "Evaluates an ordered list of boolean test expressions and jumps to the first matching branch; falls back to a default jump if none match. Use this trigger as a multi-way switch when multiple distinct conditions map to different execution paths.",
+    "requiredProperties": [
+      {
+        "name": "tests",
+        "valueType": "list<object>",
+        "required": true,
+        "fields": [
+          {
+            "name": "checkExpression",
+            "valueType": "string",
+            "required": true
+          },
+          {
+            "name": "equalTo",
+            "valueType": "boolean",
+            "required": true
+          },
+          {
+            "name": "jumpStatement",
+            "valueType": "object",
+            "required": true,
+            "description": "Where execution goes when this test matches.",
+            "discriminatorField": "statement",
+            "fields": [
+              {
+                "name": "statement",
+                "valueType": "enum:Target,Break,Continue",
+                "required": true
+              }
+            ],
+            "variants": [
+              {
+                "discriminatorValue": "Target",
+                "fields": [
+                  {
+                    "name": "target",
+                    "valueType": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "discriminatorValue": "Break",
+                "fields": []
+              },
+              {
+                "discriminatorValue": "Continue",
+                "fields": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "defaultStatement",
+        "valueType": "object",
+        "required": true,
+        "description": "Where execution goes when no test matches.",
+        "discriminatorField": "statement",
+        "fields": [
+          {
+            "name": "statement",
+            "valueType": "enum:Target,Break,Continue",
+            "required": true
+          }
+        ],
+        "variants": [
+          {
+            "discriminatorValue": "Target",
+            "fields": [
+              {
+                "name": "target",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "Break",
+            "fields": []
+          },
+          {
+            "discriminatorValue": "Continue",
+            "fields": []
+          }
+        ]
+      }
+    ],
+    "optionalProperties": [
+      {
+        "name": "variables",
+        "valueType": "list<object>",
+        "required": false,
+        "discriminatorField": "type",
+        "fields": [
+          {
+            "name": "key",
+            "valueType": "string",
+            "required": true
+          },
+          {
+            "name": "type",
+            "valueType": "enum:Const,Var,CalcVar",
+            "required": true
+          }
+        ],
+        "variants": [
+          {
+            "discriminatorValue": "Const",
+            "fields": [
+              {
+                "name": "value",
+                "valueType": "number",
+                "required": true
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "Var",
+            "fields": [
+              {
+                "name": "valueOf",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "CalcVar",
+            "fields": [
+              {
+                "name": "expression",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "Navigation",
+    "description": "Navigates to a target screen or pops the navigation stack.\n\nUse this trigger to move between interfaces, go back to the previous screen, or reset the navigation stack to the root.\n\n## Quick Start — Navigate to another interface\n```yaml\ntype: Navigation\nname: \"navToDetail\"\nproperties:\n  type: Navigate\n  target: \"detail-screen-id\"   # The IDENTIFIER of the target interface (from create_interface)\n```\n\n## Quick Start — Go back\n```yaml\ntype: Navigation\nname: \"navBack\"\nproperties:\n  type: Back\n```\n\n## Quick Start — Pop to a specific screen in the stack\n```yaml\ntype: Navigation\nname: \"navPopToHome\"\nproperties:\n  type: PopTo\n  target: \"home-screen-id\"   # The IDENTIFIER of the interface to pop back to\n```\n\n## IMPORTANT — target is an interface IDENTIFIER, NOT a name\nThe `target` value MUST be the `identifier` field of the destination interface document — the same value returned by `create_interface` or set via the `identifier` field in YAML. Do NOT use the interface `name` or `destination` — those will NOT resolve. At runtime, the framework calls `consultByIdentifier(target)` to locate the interface.",
+    "requiredProperties": [
+      {
+        "name": "type",
+        "valueType": "enum:Navigate,Back,PopToRoot,PopTo",
+        "required": true,
+        "description": "The navigation action to perform.\n\n- **Navigate**: Go to a target interface. Requires `target` (the interface identifier).\n- **Back**: Go back one screen in the navigation stack. No `target` needed.\n- **PopToRoot**: Return to the root/first screen. No `target` needed.\n- **PopTo**: Pop the stack back to a specific interface. Requires `target` (the interface identifier)."
+      }
+    ],
+    "optionalProperties": [
+      {
+        "name": "target",
+        "valueType": "string",
+        "required": false,
+        "description": "The IDENTIFIER of the destination interface. Required when `type` is `Navigate` or `PopTo`, ignored otherwise.\n\nThis value MUST match the `identifier` field of an existing interface document — the value returned by `create_interface` or declared in YAML as the document-level `identifier`. Do NOT use the interface `name` or `destination` — only the `identifier` resolves at runtime.\n\nExample: if the target interface was created with `identifier: \"detail-screen-id\"`, then `target: \"detail-screen-id\"`."
+      },
+      {
+        "name": "args",
+        "valueType": "List<String>",
+        "required": false,
+        "description": "Key references resolved from the live argument map at runtime and forwarded to the destination interface.\n\nEach string in the list is the identifier of an argument that exists in the current trigger chain's argument map. At runtime, each key is looked up — if found, its ArgumentBundle is injected into the destination interface's `_args` map. Missing keys are silently ignored.\n\nExample: `args: [\"userId\", \"token\"]` forwards the `userId` and `token` arguments to the target screen."
+      }
+    ]
+  },
+  {
+    "type": "JsonBuilder",
+    "description": "Constructs a JSON object from a declared body model or auto-collects args, optionally publishing the result under a reference key. Use this trigger to assemble a structured payload from UI state before submitting to an API or storing locally.",
+    "requiredProperties": [
+      {
+        "name": "data",
+        "valueType": "object",
+        "required": true,
+        "description": "sealed: Body | Auto.",
+        "discriminatorField": "type",
+        "fields": [
+          {
+            "name": "type",
+            "valueType": "enum:Body,Auto",
+            "required": true
+          }
+        ],
+        "variants": [
+          {
+            "discriminatorValue": "Body",
+            "fields": [
+              {
+                "name": "model",
+                "valueType": "object",
+                "required": true
+              },
+              {
+                "name": "jsonRef",
+                "valueType": "string",
+                "required": false
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "Auto",
+            "fields": [
+              {
+                "name": "jsonRef",
+                "valueType": "string",
+                "required": false
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "optionalProperties": []
+  },
+  {
+    "type": "JsonMapper",
+    "description": "Reads a JSON arg from the trigger chain context (via valueOf) and extracts/maps a portion of it into a typed result (Object, Primitive, or Array). Use this trigger AFTER an ApiService or any vertex that produces JSON output. The mapped result is emitted under this vertex's identifier for downstream use.\n\nQuick Start — extract an array from an API response:\n\n  type: JsonMapper\n  identifier: \"json_mapper_1\"\n  name: \"jsonMapper1\"\n  properties:\n    valueOf: api_call_1\n    type: Array\n    reference: \"body.abilities\"",
+    "requiredProperties": [
+      {
+        "name": "valueOf",
+        "valueType": "string",
+        "required": true,
+        "description": "REQUIRED. Identifier of an upstream vertex in the trigger chain context whose result contains the source JSON to map. The referenced arg MUST be a JSON object. Example: if an ApiService vertex has identifier 'api_call_1', use valueOf: 'api_call_1'."
+      },
+      {
+        "name": "type",
+        "valueType": "string",
+        "required": true,
+        "description": "REQUIRED. Target mapping type — determines how the extracted JSON is interpreted. Values: Object (maps to a JSON object), Primitive (extracts a single value like string or number), Array (extracts a JSON array)."
+      }
+    ],
+    "optionalProperties": [
+      {
+        "name": "reference",
+        "valueType": "string",
+        "required": false,
+        "description": "Dot-notation path to navigate into the source JSON before mapping. Example: 'body.abilities' walks into the 'body' key then the 'abilities' key. If omitted, the root JSON element is used. REQUIRED for Primitive and Array types. Optional for Object type (defaults to root).\n\nWhen the source is an ApiService vertex: the response is always wrapped in { \"code\": Number, \"body\": {...} }. You MUST start the path with 'body.' to reach the actual response payload (e.g. 'body.results', 'body.data', 'body.items'). Omitting 'body.' causes silent null — validation passes but the component receives empty data."
+      },
+      {
+        "name": "model",
+        "valueType": "object",
+        "required": false,
+        "description": "JSON object model definition used only when type is Object. Defines the shape of the target object with keys as field names and values as extraction rules. Ignored for Primitive and Array types."
+      }
+    ]
+  },
+  {
+    "type": "JsonEngine",
+    "description": "Evaluates engine-cli commands per output key to produce a new JSON object or array from existing trigger chain arguments. Use JsonEngine when you need COMPUTED values (math expressions, string transformations, conditional lookups, JSON path extractions) per field — not static assembly (use JsonBuilder) or type mapping (use JsonMapper).\n\nargType controls the execution mode:\n- Object: reads a single JSON object from argOf, evaluates each transformTo command with that object's fields accessible, emits a single JSON object.\n- Array: reads a JSON array from argOf, iterates each element, evaluates transformTo per element (use $0 in walk variables for currentIndex), emits a JSON array of objects.\n- None: no argOf needed; all values must come from const variables or passthrough; emits a single JSON object from constants.\n\nCall assembler_get_engine_cli_syntax for full transformTo command grammar (engines, variable types, quoting rules, examples).",
+    "requiredProperties": [
+      {
+        "name": "argType",
+        "valueType": "enum:Object,Array,None",
+        "required": true,
+        "description": "Controls how JsonEngine reads its source and emits its output.\n- Object: reads a single JSON object from the arg identified by argOf. Each transformTo command has access to the object's fields via --variable walk. Emits a single JSON object.\n- Array: reads a JSON array from argOf. Iterates each element; transformTo commands run once per element. Use $0 in a walk variable's jsonPath to reference the currentIndex in the array. Emits a JsonArray of objects.\n- None: argOf is ignored. No source JSON is read. All variable values must come from const variables or passthrough commands. Emits a single JSON object built from constants."
+      },
+      {
+        "name": "transformTo",
+        "valueType": "map<string,string>",
+        "required": true,
+        "description": "Map of outputKey → engine-cli command string. Each key in the output JSON object is produced by evaluating its engine-cli command. Example:\n\n  transformTo:\n    fullName: 'engine stringengine --variable var first argOf1 --variable var last argOf2 --command @first --concat \" \" --concat @last'\n    total: 'engine math --variable var price priceArg --variable var qty qtyArg --expression price*qty'\n    category: 'engine jsonwalker --argOf categoryArg --path name'\n\nCall assembler_get_engine_cli_syntax for the complete command grammar including all 5 engines, 3 variable types, quoting rules, and gotchas."
+      }
+    ],
+    "optionalProperties": [
+      {
+        "name": "argOf",
+        "valueType": "string",
+        "required": false,
+        "description": "Identifier of the upstream arg that provides the source JSON. Required when argType is Object (must be a JSON object) or Array (must be a JSON array). Ignored when argType is None — omit or leave blank."
+      }
+    ]
+  },
+  {
+    "type": "Shooter",
+    "description": "Builds a keyed JSON payload from the current args map and fires it into one or more target components, triggering their on-triggering-event. For each target: collects the ArgumentBundles referenced by the valueOf list, packs them into a standardized {\"shooter_unique_key\": key, \"args\": {...}} JsonObject, wraps it in an ArgumentBundle identified by the Shooter vertex, and emits it to the component identified by 'identifier'. Missing argIds are silently omitted. Use this trigger to propagate structured payloads to another component on the same interface.",
+    "requiredProperties": [
+      {
+        "name": "targets",
+        "valueType": "list<object>",
+        "required": true,
+        "fields": [
+          {
+            "name": "identifier",
+            "valueType": "string",
+            "required": true,
+            "description": "Identifier of the target component that will receive the emitted payload and have its on-triggering-event fired."
+          },
+          {
+            "name": "key",
+            "valueType": "string",
+            "required": true,
+            "description": "Unique key included in the payload as 'shooter_unique_key'. Used by downstream triggers (e.g. ConditionalSwitcher) to route based on the payload origin."
+          },
+          {
+            "name": "valueOf",
+            "valueType": "list<string>",
+            "required": true,
+            "description": "List of argIds to collect from the current args map. Each found ArgumentBundle is serialized into the payload's 'args' object keyed by its argId. Missing argIds are silently omitted."
+          }
+        ]
+      }
+    ],
+    "optionalProperties": []
+  },
+  {
+    "type": "FetchContextArg",
+    "description": "Fetches (reads) a named argument from a specified runtime scope",
+    "requiredProperties": [
+      {
+        "name": "valueOf",
+        "valueType": "string",
+        "required": true
+      },
+      {
+        "name": "scope",
+        "valueType": "enum:Local,Pilot,Global",
+        "required": true
+      }
+    ],
+    "optionalProperties": []
+  },
+  {
+    "type": "StateComp",
+    "description": "Applies a comp command unconditionally to change a component's visual state (color/check, message, enabled/disabled, visibility, or value/options). Use this trigger when a state mutation should always happen at a given point in the execution graph, with no conditional evaluation.",
+    "requiredProperties": [
+      {
+        "name": "command",
+        "valueType": "CompCommand",
+        "required": true,
+        "description": "A comp command string (CLI-style flags) that defines one or more state changes to apply unconditionally.\n\nFlag reference:\n| Short | Long           | Arity | Values / domain                          | Notes                                  |\n|-------|----------------|-------|------------------------------------------|----------------------------------------|\n| -c    | --check        | 1     | ok \\| warning \\| error                    | Sets the check/color state             |\n| -m    | --message      | 1     | any string (quote if it contains spaces) | ONLY valid with -c warning or -c error |\n| -d    | --display      | 1     | enabled \\| disabled                      | Controls enabled/disabled state        |\n| -v    | --visibility   | 1     | visible \\| invisible \\| hidden           | Controls visibility                    |\n| --val | --value        | 2     | (replof \\| repl) <argId \\| literal>      | Replaces the component value           |\n| -o    | --opt          | 2     | (replof \\| append) <argId>               | Replaces or appends options list       |\n| --datl | --datalist    | 2     | (replof \\| append) <argId>               | Replaces or appends data list (DynamicCatalog only) |\n\nNotes:\n- The leading `comp` keyword is OPTIONAL (both `comp -c ok` and `-c ok` are valid)\n- Strings with spaces MUST be double-quoted: -m \"Something went wrong\"\n- Last-wins: if the same flag appears twice, the last occurrence takes effect\n- -m is only valid alongside -c warning or -c error; using it with -c ok throws an error\n- --val has arity 2: first token is the operation (replof or repl), second is the argId or literal value\n- -o has arity 2: first token is the operation (replof or append), second is the argId\n- --datl has arity 2: first token is the operation (replof or append), second is the argId. ONLY valid on DynamicCatalog components. replof replaces the entire data list; append adds items — if the component has dataKey configured, dedup is applied by that key; otherwise append is unconditional\n\nExamples:\n  Minimal — set check state to ok:\n    -c ok\n\n  Multi-flag — error with message and disabled display:\n    comp -c error -m \"Validation failed\" -d disabled\n\n  Replace value from another component:\n    --val replof myTextField\n\n  Load data list into a DynamicCatalog:\n    comp --datl replof json_mapper_1\n\n  Append items to a DynamicCatalog (dedup by dataKey if configured):\n    --datl append json_mapper_1\n\n  Set visibility and check state together:\n    -v hidden -c warning -m \"Field is hidden\"\n\nCall get_expression_syntax('CompCommand') for the full grammar reference and additional examples."
+      }
+    ],
+    "optionalProperties": []
+  },
+  {
+    "type": "StringEngine",
+    "description": "Applies a pipeline of string transformations and writes the result to an arg. Use this trigger for text formatting, string manipulation, or derived string values in the UI.",
+    "requiredProperties": [
+      {
+        "name": "command",
+        "valueType": "string",
+        "required": true,
+        "description": "StringEngine pipeline command. Format: @input --flag [args...]. First token must be a @variable (the input). Then one or more --flag pairs. 14 commands: --trim (0), --trimStart (0), --trimEnd (0), --upper (0), --lower (0), --capitalize (0), --concat (1), --prepend (1), --append (1), --replace (2), --replaceFirst (2), --substring (2: start end), --take (1: n), --drop (1: n). Use validate_expression(type='StringEngine') to check syntax or get_expression_syntax('StringEngine') for full reference."
+      }
+    ],
+    "optionalProperties": [
+      {
+        "name": "variables",
+        "valueType": "list<object>",
+        "required": false,
+        "discriminatorField": "type",
+        "fields": [
+          {
+            "name": "key",
+            "valueType": "string",
+            "required": true
+          },
+          {
+            "name": "type",
+            "valueType": "enum:Const,Var",
+            "required": true
+          }
+        ],
+        "variants": [
+          {
+            "discriminatorValue": "Const",
+            "fields": [
+              {
+                "name": "value",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          },
+          {
+            "discriminatorValue": "Var",
+            "fields": [
+              {
+                "name": "valueOf",
+                "valueType": "string",
+                "required": true
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
