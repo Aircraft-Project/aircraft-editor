@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { RegistrationServiceError, type RegistrationService } from "../client";
+import type { PendingRegistration, RegisteredUser } from "../domain";
 import { RegistrationView } from "./RegistrationView";
 
 const replace = jest.fn();
@@ -12,6 +13,15 @@ jest.mock("next/navigation", () => ({
 
 const contacts = { emailMasked: "ad***@example.com", phoneMasked: "+57 300 *** 4567" };
 
+function deferred<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (reason?: unknown) => void = () => undefined;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
 function createService(overrides: Partial<RegistrationService> = {}): RegistrationService {
   return {
     checkUsername: jest.fn(async (username) => ({ username, available: true })),
@@ -39,6 +49,29 @@ async function fillValidDetails(user: ReturnType<typeof userEvent.setup>): Promi
 describe("RegistrationView", () => {
   beforeEach(() => replace.mockClear());
 
+  it("uses the Aircraft overlay while recovering the registration status", async () => {
+    const request = deferred<{ stage: "DETAILS" }>();
+    const service = createService({
+      getStatus: jest.fn(() => request.promise),
+    });
+    render(<RegistrationView service={service} />);
+
+    expect(
+      screen.getByRole("dialog", { name: "Recuperando tu registro..." }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Preparando tu información.")).toBeInTheDocument();
+    expect(screen.queryByText("Recuperando registro...")).not.toBeInTheDocument();
+
+    await act(async () => {
+      request.resolve({ stage: "DETAILS" });
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "Crea tu cuenta" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("shows public Step 1, creates pending state without OTP, then verifies after EMAIL selection", async () => {
     const user = userEvent.setup();
     const service = createService();
@@ -47,6 +80,7 @@ describe("RegistrationView", () => {
     expect(screen.getByRole("heading", { name: "Crea tu cuenta" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     expect(screen.getByText("El nombre es obligatorio.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     await fillValidDetails(user);
     await user.click(screen.getByRole("button", { name: "Continuar" }));
@@ -144,5 +178,84 @@ describe("RegistrationView", () => {
     await user.click(screen.getByRole("button", { name: /Volver al paso anterior/ }));
     expect(await screen.findByRole("alert")).toHaveTextContent("No fue posible cancelar el registro.");
     expect(screen.getByRole("heading", { name: "Verifica tu cuenta" })).toBeInTheDocument();
+  });
+
+  it("blocks Step 1 while the pending registration is being prepared", async () => {
+    const user = userEvent.setup();
+    const request = deferred<PendingRegistration>();
+    const service = createService({
+      startRegistration: jest.fn(() => request.promise),
+    });
+    render(<RegistrationView service={service} initialStatus={{ stage: "DETAILS" }} />);
+
+    await fillValidDetails(user);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(await screen.findByRole("dialog", { name: "Preparando tu registro..." })).toBeInTheDocument();
+    const submittingButton = screen.getByRole("button", { name: "Continuando..." });
+    expect(submittingButton).toBeDisabled();
+    await user.click(submittingButton);
+    expect(service.startRegistration).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      request.resolve({
+        registrationId: "reg-1",
+        status: "PENDING_VERIFICATION",
+        contacts,
+      });
+    });
+
+    expect(await screen.findByRole("heading", { name: "Verifica tu cuenta" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("uses the blocking overlay only while the OTP verification Promise is pending", async () => {
+    const user = userEvent.setup();
+    const request = deferred<RegisteredUser>();
+    const service = createService({
+      verifyCode: jest.fn(() => request.promise),
+    });
+    let overlayVisibleWhenNavigationStarted = false;
+    replace.mockImplementationOnce(() => {
+      overlayVisibleWhenNavigationStarted = screen.getByRole("dialog", {
+        name: "Verificando tu cuenta...",
+      }).hasAttribute("open");
+    });
+    render(
+      <RegistrationView
+        service={service}
+        initialStatus={{
+          stage: "VERIFICATION",
+          registrationId: "reg-1",
+          contacts,
+          selectedChannel: "EMAIL",
+          resendAvailableInSeconds: 0,
+          codeExpiresInSeconds: 250,
+        }}
+      />,
+    );
+
+    await user.click(screen.getByLabelText("Dígito 1"));
+    await user.paste("123456");
+    await user.click(screen.getByRole("button", { name: "Verificar cuenta" }));
+
+    expect(screen.getByRole("dialog", { name: "Verificando tu cuenta..." })).toBeInTheDocument();
+    expect(service.verifyCode).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      request.resolve({
+        user: {
+          id: "usr-1",
+          username: "ada.dev",
+          displayName: "Ada Lovelace",
+          initials: "AL",
+          role: "DEVELOPER",
+        },
+      });
+    });
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/?registered=1"));
+    expect(overlayVisibleWhenNavigationStarted).toBe(true);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

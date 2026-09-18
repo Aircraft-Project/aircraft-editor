@@ -224,7 +224,6 @@
 .spamHint { margin: 3px 0 7px; color: rgba(220, 231, 250, .74); font-size: .8rem; }
 .spamHint span { color: var(--registration-cyan); text-decoration: underline; }
 .bottomRule { height: 1px; margin-top: 20px; background: rgba(33, 119, 197, .38); }
-.loading { display: flex; min-height: 70vh; align-items: center; justify-content: center; gap: 12px; color: rgba(228, 239, 255, .8); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 

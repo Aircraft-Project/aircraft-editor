@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
+import { flushSync } from "react-dom";
 
 import { logout } from "@/application/logout";
 
@@ -23,6 +24,7 @@ import {
   type AuthSession,
 } from "@/modules/session";
 import {
+  AircraftLoadingOverlay,
   AppHeader,
   AppShell,
   AppSidebar,
@@ -35,6 +37,7 @@ export interface DashboardViewProps {
   projectsService?: ProjectsService;
   getCurrentSession?: () => AuthSession | null;
   autoLoad?: boolean;
+  logoutAction?: () => void | Promise<void>;
 }
 
 export function DashboardView({
@@ -42,18 +45,33 @@ export function DashboardView({
   projectsService,
   getCurrentSession = getSession,
   autoLoad = true,
+  logoutAction = logout,
 }: DashboardViewProps) {
   const router = useRouter();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isNavigating, startNavigation] = useTransition();
+  const logoutInProgress = useRef(false);
   const session = getCurrentSession();
   const redirectToLogin = useCallback(
     (): void => router.replace("/"),
     [router],
   );
-  const handleLogout = useCallback((): void => {
-    logout();
-    router.replace("/");
-  }, [router]);
+  const handleLogout = useCallback(async (): Promise<void> => {
+    if (logoutInProgress.current) return;
+
+    logoutInProgress.current = true;
+    flushSync(() => setIsLoggingOut(true));
+
+    try {
+      await logoutAction();
+      startNavigation(() => router.replace("/"));
+      setIsLoggingOut(false);
+    } catch {
+      logoutInProgress.current = false;
+      setIsLoggingOut(false);
+    }
+  }, [logoutAction, router, startNavigation]);
 
   const {
     summary,
@@ -219,6 +237,12 @@ export function DashboardView({
           {renderProjectContent()}
         </div>
       </AppShell>
+
+      <AircraftLoadingOverlay
+        open={isLoggingOut || isNavigating}
+        title="Cerrando sesión..."
+        description="Cerrando tu sesión de forma segura."
+      />
 
       <CreateProjectModal
         isOpen={isCreateModalOpen}

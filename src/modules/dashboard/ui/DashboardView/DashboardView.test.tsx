@@ -35,6 +35,15 @@ jest.mock("next/navigation", () => ({
   useRouter: () => mockRouter,
 }));
 
+function deferred<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (reason?: unknown) => void = () => undefined;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
 const session: AuthSession = {
   user: {
     id: "usr-admin-001",
@@ -107,16 +116,19 @@ const renderDashboard = ({
   dashboardService = createDashboardService(),
   projectsService = createProjectsService(),
   currentSession = session,
+  logoutAction,
 }: {
   dashboardService?: DashboardService;
   projectsService?: ProjectsService;
   currentSession?: AuthSession | null;
+  logoutAction?: () => void | Promise<void>;
 } = {}) =>
   render(
     <DashboardView
       dashboardService={dashboardService}
       projectsService={projectsService}
       getCurrentSession={() => currentSession}
+      logoutAction={logoutAction}
     />,
   );
 
@@ -431,4 +443,57 @@ describe("DashboardView", () => {
       expect(mockReplace).toHaveBeenCalledWith("/");
     });
   });
-});
+
+  it("blocks the dashboard and prevents duplicate logout while the operation is pending", async () => {
+    const user = userEvent.setup();
+    const request = deferred<void>();
+    const logoutAction = jest.fn(() => request.promise);
+    renderDashboard({ logoutAction });
+    await screen.findByText("Wallet Mobile");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Abrir menú de usuario de Administrador",
+      }),
+    );
+    await user.click(
+      screen.getByRole("menuitem", { name: "Cerrar sesión" }),
+    );
+
+    expect(screen.getByRole("dialog", { name: "Cerrando sesión..." })).toBeInTheDocument();
+    expect(screen.getByText("Cerrando tu sesión de forma segura.")).toBeInTheDocument();
+    expect(logoutAction).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      request.resolve(undefined);
+    });
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(logoutAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes the logout overlay when the logout operation fails", async () => {
+    const user = userEvent.setup();
+    const request = deferred<void>();
+    const logoutAction = jest.fn(() => request.promise);
+    renderDashboard({ logoutAction });
+    await screen.findByText("Wallet Mobile");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Abrir menú de usuario de Administrador",
+      }),
+    );
+    await user.click(
+      screen.getByRole("menuitem", { name: "Cerrar sesión" }),
+    );
+    expect(screen.getByRole("dialog", { name: "Cerrando sesión..." })).toBeInTheDocument();
+
+    await act(async () => {
+      request.reject(new Error("logout failed"));
+    });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(mockReplace).not.toHaveBeenCalled();
+  });});

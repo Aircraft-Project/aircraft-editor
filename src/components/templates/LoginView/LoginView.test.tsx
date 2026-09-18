@@ -21,6 +21,15 @@ const adminSession: AuthSession = {
   },
 };
 
+function deferred<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (reason?: unknown) => void = () => undefined;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
 describe("LoginView", () => {
   beforeEach(() => {
     replace.mockClear();
@@ -38,6 +47,7 @@ describe("LoginView", () => {
     expect(screen.getByText("El usuario es obligatorio.")).toBeInTheDocument();
     expect(screen.getByText("La contraseña es obligatoria.")).toBeInTheDocument();
     expect(service.login).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("toggles password visibility", async () => {
@@ -72,14 +82,19 @@ describe("LoginView", () => {
     await user.type(screen.getByLabelText("Contraseña"), "admin");
     await user.click(screen.getByRole("button", { name: "Iniciar sesión" }));
 
-    expect(screen.getByRole("button", { name: "Iniciando sesión..." })).toBeDisabled();
+    const submittingButton = screen.getByRole("button", { name: "Iniciando sesión..." });
+    expect(submittingButton).toBeDisabled();
+    expect(screen.getByRole("dialog", { name: "Iniciando sesión..." })).toBeInTheDocument();
+    await user.click(submittingButton);
     expect(service.login).toHaveBeenCalledWith({ username: "admin", password: "admin" });
+    expect(service.login).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       resolveLogin?.(adminSession);
     });
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/projects"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(window.sessionStorage.getItem("aircraft.auth.session")).not.toContain("password");
   });
 
@@ -131,4 +146,33 @@ describe("LoginView", () => {
     expect(push).toHaveBeenCalledWith("/register");
     expect(screen.queryByText(/No fue posible iniciar el registro/)).not.toBeInTheDocument();
   });
-});
+
+  it("closes the overlay and preserves the existing error UI after a failed login", async () => {
+    const user = userEvent.setup();
+    const request = deferred<AuthSession>();
+    const service: AuthService = {
+      login: jest.fn(() => request.promise),
+    };
+
+    render(<LoginView service={service} />);
+    await user.type(screen.getByLabelText("Usuario"), "admin");
+    await user.type(screen.getByLabelText("Contraseña"), "incorrecta");
+    await user.click(screen.getByRole("button", { name: "Iniciar sesión" }));
+
+    expect(screen.getByRole("dialog", { name: "Iniciando sesión..." })).toBeInTheDocument();
+
+    await act(async () => {
+      request.reject(
+        new AuthServiceError(
+          "Usuario o contraseña incorrectos.",
+          "INVALID_CREDENTIALS",
+          401,
+        ),
+      );
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Usuario o contraseña incorrectos.",
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });});
