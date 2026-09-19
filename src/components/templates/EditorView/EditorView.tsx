@@ -1,184 +1,123 @@
 "use client";
 
-import { useMemo } from "react";
-import { Background, Controls, MiniMap, ReactFlow, type Edge, type Node } from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import { Inspector, LayoutCanvas, LeftPanel, ScreensCarousel, Topbar, type Screen } from "@/components/organisms";
-import { findColumn, findComponent, findRow } from "@/modules/screens/layoutTree";
+import {
+  useCallback,
+  useRef,
+  useState,
+} from "react";
+import {
+  defaultDevicePresetId,
+} from "@/components/organisms/LayoutCanvas/devicePresets";
+import { Topbar } from "@/components/organisms";
+import {
+  aircraftSchemaProvider,
+  type SchemaProvider,
+} from "@/modules/aircraft-schema";
+import {
+  ComponentsWorkspace,
+  DEFAULT_EDITOR_WORKSPACE,
+  EditorNavigation,
+  type EditorWorkspace,
+  PreviewDialog,
+  ResourcesWorkspace,
+  ScreensWorkspace,
+  TriggersWorkspace,
+} from "@/modules/editor";
 import { useEditorStore } from "@/store/useEditorStore";
 import styles from "./EditorView.module.css";
 
-const demoScreens: Screen[] = [
-  { id: "home", name: "Home", documentContext: "INTERFACE" },
-  { id: "login", name: "Login", documentContext: "INTERFACE" },
-];
-
-/**
- * Grafo de demostración basado en el ejemplo del PRD §4.2 (btn_register / ON_CLICK).
- * Placeholder para probar que @xyflow/react está bien integrado — no hay
- * TriggerGraph real todavía (no hay AST ni SchemaProvider conectados).
- */
-const demoNodes: Node[] = [
-  { id: "switch_valid", position: { x: 0, y: 0 }, data: { label: "ConditionalSwitcher\nswitch_valid" } },
-  { id: "api_register", position: { x: -160, y: 120 }, data: { label: "ApiService\napi_register" } },
-  { id: "state_show_err", position: { x: 160, y: 120 }, data: { label: "StateComp\nstate_show_err" } },
-  { id: "nav_welcome", position: { x: -160, y: 240 }, data: { label: "Navigation\nnav_welcome" } },
-];
-
-const demoEdges: Edge[] = [
-  { id: "e1", source: "switch_valid", target: "api_register", label: "tests[0]" },
-  { id: "e2", source: "switch_valid", target: "state_show_err", label: "default" },
-  { id: "e3", source: "api_register", target: "nav_welcome" },
-];
-
 type EditorViewProps = {
-  projectId?: string;
-  onBackToProjects?: () => void;
+  readonly projectId?: string;
+  readonly onBackToProjects?: () => void;
+  readonly schemaProvider?: SchemaProvider;
 };
 
-export function EditorView({ projectId, onBackToProjects }: EditorViewProps) {
-  const projectName = projectId ?? "Mi App E-Commerce";
-  const {
-    mode,
-    activeScreenId,
-    activeEvent,
-    screenTrees,
-    selection,
-    setActiveScreen,
-    openTriggerGraph,
-    backToLayout,
-    selectComponent,
-    selectRow,
-    selectColumn,
-    addColumn,
-    addColumnToRow,
-    removeColumn,
-    setColumnWeight,
-    removeRow,
-    setRowWeight,
-    setRowHeight,
-    renameComponent,
-    dropOnColumn,
-    dropOnRow,
-  } = useEditorStore();
+export function EditorView({
+  projectId,
+  onBackToProjects,
+  schemaProvider = aircraftSchemaProvider,
+}: EditorViewProps) {
+  const projectName = projectId ?? "Mi aplicación";
+  const [workspace, setWorkspace] = useState<EditorWorkspace>(
+    DEFAULT_EDITOR_WORKSPACE,
+  );
+  const [devicePresetId, setDevicePresetId] = useState(
+    defaultDevicePresetId,
+  );
+  const [zoom, setZoom] = useState(100);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [saveAnnouncement, setSaveAnnouncement] = useState("");
+  const previewButtonRef = useRef<HTMLButtonElement>(null);
+  const { activeScreenId, screens, screenTrees } = useEditorStore();
+  const activeScreen =
+    screens.find((screen) => screen.id === activeScreenId) ?? screens[0];
+  const activeBody = screenTrees[activeScreen.id];
 
-  const body = screenTrees[activeScreenId];
-
-  const inspectorProps = useMemo(() => {
-    if (mode === "trigger-graph" && activeEvent) {
-      return {
-        state: "vertex" as const,
-        data: {
-          type: "ConditionalSwitcher",
-          name: "switch_valid",
-          id: "switch_valid",
-          properties: [
-            { label: "checkExpression", value: "@email != '' AND @pwd != ''", required: true },
-            { label: "jumpStatement", value: "api_register" },
-          ],
-        },
-      };
-    }
-
-    if (selection?.kind === "row") {
-      const row = findRow(body, selection.id);
-      if (row) {
-        return {
-          state: "row" as const,
-          data: { id: row.id, weight: row.weight, height: row.height },
-          onWeightChange: (weight: number | undefined) => setRowWeight(row.id, weight),
-          onHeightChange: (height: typeof row.height) => setRowHeight(row.id, height),
-        };
-      }
-    }
-
-    if (selection?.kind === "column") {
-      const column = findColumn(body, selection.id);
-      if (column) {
-        return {
-          state: "column" as const,
-          data: { id: column.id, weight: column.weight },
-          onWeightChange: (weight: number) => setColumnWeight(column.id, weight),
-        };
-      }
-    }
-
-    if (selection?.kind === "component") {
-      const component = findComponent(body, selection.id);
-      if (component) {
-        return {
-          state: "component" as const,
-          data: {
-            name: component.name,
-            type: component.type,
-            subtype: component.subtype,
-            id: component.id,
-            properties: [{ label: "name", value: component.name, required: true }],
-            observers: [],
-            events: [
-              { name: "ON_CLICK", configured: false },
-              { name: "ON_OBSERVE", configured: false },
-              { name: "ON_CREATE", configured: false },
-            ],
-          },
-          onSelectEvent: (eventName: string) => openTriggerGraph(component.name, eventName),
-          onPropertyChange: (label: string, value: string) => {
-            if (label === "name") renameComponent(component.id, value);
-          },
-        };
-      }
-    }
-
-    return { state: "empty" as const };
-  }, [mode, activeEvent, selection, body, openTriggerGraph, renameComponent, setRowWeight, setRowHeight, setColumnWeight]);
+  const returnPreviewFocus = useCallback(() => {
+    previewButtonRef.current?.focus();
+  }, []);
 
   return (
     <div className={styles.view}>
-      <Topbar projectName={projectName} onBack={onBackToProjects} />
+      <Topbar
+        projectName={projectName}
+        devicePresetId={devicePresetId}
+        zoom={zoom}
+        previewButtonRef={previewButtonRef}
+        onBack={onBackToProjects}
+        onDeviceChange={setDevicePresetId}
+        onZoomChange={setZoom}
+        onPreview={() => setPreviewOpen(true)}
+        onSave={() =>
+          setSaveAnnouncement(
+            "Los cambios permanecen guardados localmente durante esta sesión.",
+          )
+        }
+      />
 
       <div className={styles.body}>
-        <LeftPanel disabled={mode === "trigger-graph"} />
-
-        <div className={styles.canvas}>
-          {mode === "layout" ? (
-            <LayoutCanvas
-              body={body}
-              selection={selection}
-              onSelectComponent={selectComponent}
-              onSelectRow={selectRow}
-              onSelectColumn={selectColumn}
-              onAddColumn={addColumn}
-              onAddColumnToRow={addColumnToRow}
-              onRemoveColumn={removeColumn}
-              onRemoveRow={removeRow}
-              onDropOnColumn={dropOnColumn}
-              onDropOnRow={dropOnRow}
+        <EditorNavigation
+          activeWorkspace={workspace}
+          onChange={setWorkspace}
+        />
+        <section
+          className={styles.workspace}
+          aria-label={`Workspace ${workspace}`}
+        >
+          {workspace === "components" ? (
+            <ComponentsWorkspace
+              provider={schemaProvider}
+              devicePresetId={devicePresetId}
+              zoom={zoom}
+              onOpenTriggers={() => setWorkspace("triggers")}
             />
-          ) : (
-            <>
-              <div className={styles.triggerGraphHeader}>
-                <button type="button" className={styles.triggerGraphBack} onClick={backToLayout}>
-                  ← Back
-                </button>
-                <span>
-                  {activeEvent?.componentName} › {activeEvent?.eventName}
-                </span>
-              </div>
-              <div className={styles.triggerGraphFlow}>
-                <ReactFlow nodes={demoNodes} edges={demoEdges} fitView>
-                  <Background />
-                  <Controls />
-                  <MiniMap />
-                </ReactFlow>
-              </div>
-            </>
-          )}
-        </div>
-
-        <Inspector {...inspectorProps} />
+          ) : null}
+          {workspace === "screens" ? (
+            <ScreensWorkspace
+              provider={schemaProvider}
+              devicePresetId={devicePresetId}
+            />
+          ) : null}
+          {workspace === "triggers" ? (
+            <TriggersWorkspace provider={schemaProvider} />
+          ) : null}
+          {workspace === "resources" ? <ResourcesWorkspace /> : null}
+        </section>
       </div>
 
-      <ScreensCarousel screens={demoScreens} activeScreenId={activeScreenId} onSelectScreen={setActiveScreen} />
+      <p className={styles.announcement} aria-live="polite">
+        {saveAnnouncement}
+      </p>
+
+      {previewOpen ? (
+        <PreviewDialog
+          body={activeBody}
+          devicePresetId={devicePresetId}
+          screenName={activeScreen.name}
+          onClose={() => setPreviewOpen(false)}
+          returnFocus={returnPreviewFocus}
+        />
+      ) : null}
     </div>
   );
 }

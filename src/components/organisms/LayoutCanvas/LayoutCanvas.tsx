@@ -1,11 +1,11 @@
 "use client";
 
 import { DragEvent, useState } from "react";
-import { Button, Select } from "@/components/atoms";
+import { Button } from "@/components/atoms";
 import { ASTNodeCard } from "@/components/molecules";
 import type { Selection } from "@/store/useEditorStore";
 import type { BodyNode, ColumnNode, DroppedPaletteItem, RowNode } from "@/modules/screens/layoutTree";
-import { defaultDevicePresetId, devicePresets, getDevicePreset } from "./devicePresets";
+import { getDevicePreset } from "./devicePresets";
 import styles from "./LayoutCanvas.module.css";
 
 const DRAG_MIME = "application/json";
@@ -39,15 +39,19 @@ type TreeCallbacks = {
 
 type LayoutCanvasProps = TreeCallbacks & {
   body: BodyNode;
+  devicePresetId: string;
+  zoom: number;
   onAddColumn: () => void;
 };
 
-export function LayoutCanvas({ body, onAddColumn, ...callbacks }: LayoutCanvasProps) {
-  const [devicePresetId, setDevicePresetId] = useState(defaultDevicePresetId);
+export function LayoutCanvas({
+  body,
+  devicePresetId,
+  zoom,
+  onAddColumn,
+  ...callbacks
+}: LayoutCanvasProps) {
   const device = getDevicePreset(devicePresetId);
-
-  const iosDevices = devicePresets.filter((preset) => preset.platform === "iOS");
-  const androidDevices = devicePresets.filter((preset) => preset.platform === "Android");
 
   return (
     <div className={styles.canvas}>
@@ -56,32 +60,6 @@ export function LayoutCanvas({ body, onAddColumn, ...callbacks }: LayoutCanvasPr
           + Columna
         </Button>
 
-        <div className={styles.deviceField}>
-          <Select
-            label="Dispositivo"
-            value={devicePresetId}
-            onChange={(event) => setDevicePresetId(event.target.value)}
-          >
-            <optgroup label="iOS">
-              {iosDevices.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Android">
-              {androidDevices.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label}
-                </option>
-              ))}
-            </optgroup>
-          </Select>
-          <span className={styles.deviceDims}>
-            {device.width} × {device.height}
-          </span>
-        </div>
-
         <span className={styles.hint}>
           Arrastra componentes desde la paleta hacia una row o hacia el área vacía de una column. Una
           row también puede dividirse en columns con el botón &quot;+ Col&quot;.
@@ -89,7 +67,15 @@ export function LayoutCanvas({ body, onAddColumn, ...callbacks }: LayoutCanvasPr
       </div>
 
       <div className={styles.viewport}>
-        <div className={styles.deviceFrame} style={{ width: device.width, height: device.height }}>
+        <div
+          className={styles.deviceFrame}
+          style={{
+            width: device.width,
+            height: device.height,
+            transform: `scale(${zoom / 100})`,
+            transformOrigin: "top center",
+          }}
+        >
           <div className={styles.body}>
             {body.columns.map((column) => (
               <ColumnView key={column.id} column={column} canRemove={body.columns.length > 1} callbacks={callbacks} />

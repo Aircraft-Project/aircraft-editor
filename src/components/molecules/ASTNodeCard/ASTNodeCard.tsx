@@ -1,4 +1,4 @@
-import { ComponentType, componentTypeColors } from "@/design/tokens";
+import { ComponentType, getComponentTypeColor } from "@/design/tokens";
 import styles from "./ASTNodeCard.module.css";
 
 type ASTNodeCardProps = {
@@ -9,12 +9,20 @@ type ASTNodeCardProps = {
   onClick?: () => void;
 };
 
-export function ASTNodeCard({ type, name, selected, hasTriggers, onClick }: ASTNodeCardProps) {
-  const color = componentTypeColors[type];
+export function ASTNodeCard({
+  type,
+  name,
+  selected,
+  hasTriggers,
+  onClick,
+}: ASTNodeCardProps) {
+  const color = getComponentTypeColor(type);
 
   return (
     <div
-      className={[styles.card, selected ? styles.selected : ""].filter(Boolean).join(" ")}
+      className={[styles.card, selected ? styles.selected : ""]
+        .filter(Boolean)
+        .join(" ")}
       onClick={onClick}
       role={onClick ? "button" : undefined}
     >

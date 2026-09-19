@@ -1,0 +1,99 @@
+.stage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(17, 136, 224, 0.15), transparent 42%),
+    #021222;
+}
+
+.device {
+  flex: 0 0 auto;
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  color: #07192c;
+  background: #f9fcff;
+  border: 12px solid #091523;
+  border-radius: 48px;
+  box-shadow:
+    0 0 0 2px rgba(93, 148, 190, 0.65),
+    0 20px 55px rgba(0, 0, 0, 0.48);
+  overflow: hidden;
+}
+
+.statusBar {
+  height: 34px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.previewHeader {
+  padding: 14px 20px 8px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: #061748;
+}
+
+.previewContent {
+  flex: 1;
+  min-height: 0;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  overflow: auto;
+}
+
+.component {
+  padding: 13px 15px;
+  display: grid;
+  gap: 3px;
+  color: #0b2c4f;
+  background: #eef7ff;
+  border: 1px solid #c5def3;
+  border-radius: 12px;
+}
+
+.component span {
+  color: #51718d;
+  font-size: 10px;
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.empty strong {
+  color: #071b54;
+  font-size: 24px;
+}
+
+.empty span {
+  max-width: 260px;
+  color: #49647d;
+  line-height: 1.5;
+}
+
+.navigationBar {
+  min-height: 64px;
+  padding: 10px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  color: #075acf;
+  border-top: 1px solid #d9e8f3;
+  font-size: 11px;
+}

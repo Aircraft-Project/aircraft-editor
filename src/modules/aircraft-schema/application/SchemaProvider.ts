@@ -14,6 +14,9 @@ export interface SchemaProvider {
   getComponent(type: string): Promise<ComponentSchema>;
   listTriggers(): Promise<readonly TriggerDefinition[]>;
   getTrigger(type: string): Promise<TriggerSchema>;
-  getEffectiveEvents(componentType: string): Promise<readonly EventDefinition[]>;
+  getEffectiveEvents(
+    componentType: string,
+  ): Promise<readonly EventDefinition[]>;
+  listContexts(): Promise<readonly ContextRules[]>;
   getContextRules(context: string): Promise<ContextRules>;
 }

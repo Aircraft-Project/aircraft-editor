@@ -21,3 +21,4 @@ export type {
   TriggerSchema,
 } from "./domain";
 export { MockSchemaProvider } from "./infrastructure";
+export { aircraftSchemaProvider } from "./composition";

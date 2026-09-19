@@ -1,4 +1,5 @@
 import { ComponentType } from "@/design/tokens";
+import type { SchemaValue } from "@/modules/aircraft-schema";
 
 /**
  * Modelo de AST simplificado (Body → Column → Row → (Component | Column)), PRD §4.1.
@@ -50,6 +51,7 @@ export type ComponentNode = {
   type: ComponentType;
   subtype: string;
   name: string;
+  properties: Record<string, SchemaValue>;
 };
 
 /** Hijo de una Row: un Component hoja, o una Column que subdivide la Row. */
@@ -77,7 +79,11 @@ export type BodyNode = {
   columns: ColumnNode[];
 };
 
-export type DroppedPaletteItem = { type: ComponentType; subtype: string };
+export type DroppedPaletteItem = {
+  type: ComponentType;
+  subtype: string;
+  initialProperties?: Record<string, SchemaValue>;
+};
 
 let idCounter = 0;
 export function nextId(prefix: string): string {
@@ -85,13 +91,19 @@ export function nextId(prefix: string): string {
   return `${prefix}-${idCounter}`;
 }
 
-export function createComponentNode(type: ComponentType, subtype: string, displayIndex: number): ComponentNode {
+export function createComponentNode(
+  type: ComponentType,
+  subtype: string,
+  displayIndex: number,
+  initialProperties: Record<string, SchemaValue> = {},
+): ComponentNode {
   return {
     id: nextId("component"),
     kind: "component",
     type,
     subtype,
     name: `${type} ${displayIndex}`,
+    properties: initialProperties,
   };
 }
 
@@ -271,4 +283,50 @@ export function removeColumnDeep(body: BodyNode, columnId: string): BodyNode {
 
   const columns = body.columns.filter((column) => column.id !== columnId).map(removeFromColumn);
   return { ...body, columns };
+}
+
+
+export function listComponents(body: BodyNode): ComponentNode[] {
+  const components: ComponentNode[] = [];
+  const visitColumn = (column: ColumnNode) => {
+    for (const row of column.rows) {
+      for (const child of row.children) {
+        if (child.kind === "component") {
+          components.push(child);
+        } else {
+          visitColumn(child);
+        }
+      }
+    }
+  };
+
+  body.columns.forEach(visitColumn);
+  return components;
+}
+
+export function cloneBody(body: BodyNode): BodyNode {
+  const cloneColumn = (column: ColumnNode): ColumnNode => ({
+    ...column,
+    id: nextId("column"),
+    rows: column.rows.map(cloneRow),
+  });
+  const cloneRow = (row: RowNode): RowNode => ({
+    ...row,
+    id: nextId("row"),
+    children: row.children.map((child) =>
+      child.kind === "component"
+        ? {
+            ...child,
+            id: nextId("component"),
+            properties: { ...child.properties },
+          }
+        : cloneColumn(child),
+    ),
+  });
+
+  return {
+    ...body,
+    id: nextId("body"),
+    columns: body.columns.map(cloneColumn),
+  };
 }

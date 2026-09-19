@@ -1,5 +1,5 @@
 import { HTMLAttributes } from "react";
-import { ComponentType, componentTypeColors } from "@/design/tokens";
+import { ComponentType, getComponentTypeColor } from "@/design/tokens";
 import styles from "./ComponentChip.module.css";
 
 type ComponentChipProps = Omit<HTMLAttributes<HTMLDivElement>, "style"> & {
@@ -8,8 +8,13 @@ type ComponentChipProps = Omit<HTMLAttributes<HTMLDivElement>, "style"> & {
   draggable?: boolean;
 };
 
-export function ComponentChip({ type, subtype, draggable, ...props }: ComponentChipProps) {
-  const color = componentTypeColors[type];
+export function ComponentChip({
+  type,
+  subtype,
+  draggable,
+  ...props
+}: ComponentChipProps) {
+  const color = getComponentTypeColor(type);
   const initial = type.slice(0, 1).toUpperCase();
 
   return (

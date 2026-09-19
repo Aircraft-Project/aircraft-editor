@@ -97,6 +97,10 @@ export class MockSchemaProvider implements SchemaProvider {
     return (await this.getComponent(componentType)).effectiveEvents;
   }
 
+  listContexts(): Promise<readonly ContextRules[]> {
+    return Promise.resolve(this.snapshot.contexts);
+  }
+
   getContextRules(context: string): Promise<ContextRules> {
     const rules = this.contextsByName.get(context);
     if (!rules) {

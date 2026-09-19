@@ -30,17 +30,13 @@ export const designTokens = {
   warning: "#F59E0B",
 } as const;
 
-/** Los 7 tipos de componente publicados por el SchemaProvider (PRD §4.4 / §7.1). */
-export type ComponentType =
-  | "Button"
-  | "Catalog"
-  | "Fractal"
-  | "ICON"
-  | "IMAGE"
-  | "TextField"
-  | "TextLabel";
+/**
+ * Component identifiers are schema data, not a closed Editor enum.
+ * Presentation colors are optional decoration with a deterministic fallback.
+ */
+export type ComponentType = string;
 
-export const componentTypeColors: Record<ComponentType, string> = {
+const componentTypeColors: Readonly<Record<string, string>> = {
   Button: "#F43F5E",
   Catalog: "#8B5CF6",
   Fractal: "#D946EF",
@@ -49,3 +45,18 @@ export const componentTypeColors: Record<ComponentType, string> = {
   TextField: "#A3E635",
   TextLabel: "#A8A29E",
 };
+
+const fallbackColors = [
+  "#38BDF8",
+  "#22D3EE",
+  "#2DD4BF",
+  "#818CF8",
+] as const;
+
+export function getComponentTypeColor(type: string): string {
+  const hash = [...type].reduce(
+    (value, character) => value + character.charCodeAt(0),
+    0,
+  );
+  return componentTypeColors[type] ?? fallbackColors[hash % fallbackColors.length];
+}
