@@ -27,6 +27,13 @@ export const PROJECT_ACCENTS = [
 ] as const;
 
 export type ProjectAccent = (typeof PROJECT_ACCENTS)[number];
+export type ProjectSource = "LOCAL" | "CLOUD";
+export type ProjectSyncState =
+  | "LOCAL_ONLY"
+  | "CLOUD_ONLY"
+  | "SYNCED"
+  | "LOCAL_CHANGES"
+  | "CONFLICT";
 
 export interface Project {
   id: string;
@@ -38,6 +45,8 @@ export interface Project {
   icon: ProjectIconType;
   accent: ProjectAccent;
   ownerId: string;
+  source?: ProjectSource;
+  syncState?: ProjectSyncState;
 }
 
 export interface CreateProjectRequest {
@@ -70,9 +79,7 @@ export const isProjectAccent = (value: unknown): value is ProjectAccent =>
   PROJECT_ACCENTS.some((accent) => accent === value);
 
 export const isProject = (value: unknown): value is Project => {
-  if (!isRecord(value)) {
-    return false;
-  }
+  if (!isRecord(value)) return false;
 
   return (
     typeof value.id === "string" &&
@@ -89,6 +96,13 @@ export const isProject = (value: unknown): value is Project => {
     isProjectIconType(value.icon) &&
     isProjectAccent(value.accent) &&
     typeof value.ownerId === "string" &&
-    value.ownerId.length > 0
+    value.ownerId.length > 0 &&
+    (value.source === undefined ||
+      value.source === "LOCAL" ||
+      value.source === "CLOUD") &&
+    (value.syncState === undefined ||
+      ["LOCAL_ONLY", "CLOUD_ONLY", "SYNCED", "LOCAL_CHANGES", "CONFLICT"].includes(
+        String(value.syncState),
+      ))
   );
 };

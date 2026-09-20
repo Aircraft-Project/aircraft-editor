@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, session } from "electron";
 import path from "node:path";
+import { registerLocalProjectIpc } from "./registerLocalProjectIpc";
 
 const DEFAULT_RENDERER_URL = "http://127.0.0.1:3000";
 const WINDOW_BACKGROUND = "#020b1a";
@@ -92,24 +93,39 @@ async function createMainWindow(): Promise<void> {
     (_event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
       if (isMainFrame && errorCode !== NET_ERROR_ABORTED) {
         console.error(
-          `[desktop] Failed to load ${validatedUrl}: ${errorDescription} (${errorCode}).`,
+          "[desktop] Failed to load " +
+            validatedUrl +
+            ": " +
+            errorDescription +
+            " (" +
+            errorCode +
+            ").",
         );
       }
     },
   );
 
   window.webContents.once("did-finish-load", () => {
-    console.info(`[desktop] Aircraft Editor loaded from ${rendererUrl.origin}.`);
+    console.info(
+      "[desktop] Aircraft Editor loaded from " +
+        rendererUrl.origin +
+        ".",
+    );
   });
 
   try {
     await window.loadURL(rendererUrl.toString());
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown load error";
-    console.error(`[desktop] Unable to load Aircraft Editor: ${message}`);
+    const message =
+      error instanceof Error ? error.message : "Unknown load error";
+    console.error(
+      "[desktop] Unable to load Aircraft Editor: " + message,
+    );
     dialog.showErrorBox(
       "Aircraft Editor",
-      `No se pudo cargar Aircraft Editor desde ${rendererUrl.origin}. Verifica que el servidor Next esté disponible.`,
+      "No se pudo cargar Aircraft Editor desde " +
+        rendererUrl.origin +
+        ". Verifica que el servidor Next esté disponible.",
     );
     if (!window.isDestroyed()) window.destroy();
     app.quit();
@@ -128,6 +144,7 @@ if (!hasSingleInstanceLock) {
   app.whenReady()
     .then(async () => {
       configureSessionSecurity();
+      registerLocalProjectIpc(app.getPath("userData"));
       await createMainWindow();
 
       app.on("activate", () => {
@@ -137,8 +154,9 @@ if (!hasSingleInstanceLock) {
       });
     })
     .catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : "Unknown startup error";
-      console.error(`[desktop] Electron startup failed: ${message}`);
+      const message =
+        error instanceof Error ? error.message : "Unknown startup error";
+      console.error("[desktop] Electron startup failed: " + message);
       app.quit();
     });
 }

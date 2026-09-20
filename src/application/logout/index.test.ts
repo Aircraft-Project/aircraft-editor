@@ -3,6 +3,7 @@ import {
   useDashboardStore,
 } from "@/modules/dashboard/client/state";
 import type { Project } from "@/modules/projects";
+import { registerActiveProjectFlush } from "@/modules/local-project";
 import {
   resetProjectsState,
   useProjectsStore,
@@ -80,5 +81,34 @@ describe("logout", () => {
       status: "idle",
       error: null,
     });
+  });
+
+  it("waits for pending local writes before clearing the session", async () => {
+    let resolveFlush: () => void = () => undefined;
+    const flush = new Promise<void>((resolve) => {
+      resolveFlush = resolve;
+    });
+    const unregister = registerActiveProjectFlush(() => flush);
+    setSession(session);
+
+    const result = logout();
+    expect(result).toBeInstanceOf(Promise);
+    expect(getSession()).toEqual(session);
+
+    resolveFlush();
+    await result;
+    expect(getSession()).toBeNull();
+    unregister();
+  });
+
+  it("keeps the session when local persistence flush fails", async () => {
+    const unregister = registerActiveProjectFlush(() =>
+      Promise.reject(new Error("disk full")),
+    );
+    setSession(session);
+
+    await expect(logout()).rejects.toThrow("disk full");
+    expect(getSession()).toEqual(session);
+    unregister();
   });
 });

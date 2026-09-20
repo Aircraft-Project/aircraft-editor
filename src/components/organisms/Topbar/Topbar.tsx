@@ -1,6 +1,7 @@
 import type { Ref } from "react";
 import Image from "next/image";
 import { ChevronLeft, Eye, Save } from "lucide-react";
+import type { SaveState } from "@/modules/local-project";
 import {
   devicePresets,
   getDevicePreset,
@@ -11,18 +12,20 @@ type TopbarProps = {
   readonly projectName: string;
   readonly devicePresetId: string;
   readonly zoom: number;
+  readonly saveState?: SaveState;
   readonly previewButtonRef?: Ref<HTMLButtonElement>;
   readonly onBack?: () => void;
   readonly onDeviceChange: (devicePresetId: string) => void;
   readonly onZoomChange: (zoom: number) => void;
   readonly onPreview: () => void;
-  readonly onSave: () => void;
+  readonly onSave?: () => void;
 };
 
 export function Topbar({
   projectName,
   devicePresetId,
   zoom,
+  saveState,
   previewButtonRef,
   onBack,
   onDeviceChange,
@@ -101,7 +104,9 @@ export function Topbar({
           onChange={(event) => onZoomChange(Number(event.target.value))}
         >
           {[50, 75, 100, 125].map((value) => (
-            <option key={value} value={value}>{value}%</option>
+            <option key={value} value={value}>
+              {value}%
+            </option>
           ))}
         </select>
       </label>
@@ -114,18 +119,34 @@ export function Topbar({
       >
         <Eye size={18} /> Vista previa
       </button>
-      <button
-        type="button"
-        className={styles.action}
-        title="Los cambios se conservan localmente durante esta sesión."
-        onClick={onSave}
-      >
-        <Save size={18} /> Guardar
-      </button>
-      <span className={styles.localStatus} title={device.label}>
-        Cambios locales
+      {saveState && onSave ? (
+        <>
+          <button
+            type="button"
+            className={styles.action}
+            title="Guardar todos los cambios locales pendientes"
+            onClick={onSave}
+          >
+            <Save size={18} /> Guardar
+          </button>
+          <span
+            className={styles.localStatus}
+            title={device.label}
+            data-state={saveState}
+          >
+            {saveState === "DIRTY"
+              ? "Cambios sin guardar"
+              : saveState === "SAVING"
+                ? "Guardando..."
+                : saveState === "ERROR"
+                  ? "Error al guardar"
+                  : "Guardado"}
+          </span>
+        </>
+      ) : null}
+      <span className={styles.avatar} aria-label="Usuario actual">
+        JD
       </span>
-      <span className={styles.avatar} aria-label="Usuario actual">JD</span>
     </header>
   );
 }

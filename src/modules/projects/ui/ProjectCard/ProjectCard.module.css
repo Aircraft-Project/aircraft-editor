@@ -258,3 +258,19 @@
     transform: none;
   }
 }
+
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  margin-bottom: 0.32rem;
+  color: #5fe4ff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.source[data-source="CLOUD"] {
+  color: rgba(189, 218, 247, 0.68);
+}

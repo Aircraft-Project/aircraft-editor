@@ -2,6 +2,8 @@
 
 import {
   Clock3,
+  Cloud,
+  Laptop,
   Ellipsis,
   ExternalLink,
   MonitorSmartphone,
@@ -138,6 +140,14 @@ export function ProjectCard({
       </div>
 
       <div className={styles.copy}>
+        <span className={styles.source} data-source={project.source ?? "CLOUD"}>
+          {(project.source ?? "CLOUD") === "LOCAL" ? (
+            <Laptop size={13} aria-hidden="true" />
+          ) : (
+            <Cloud size={13} aria-hidden="true" />
+          )}
+          {(project.source ?? "CLOUD") === "LOCAL" ? "Local" : "Nube"}
+        </span>
         <h2>{project.name}</h2>
         <p>{project.description}</p>
       </div>

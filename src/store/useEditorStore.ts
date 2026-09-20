@@ -79,6 +79,12 @@ type EditorState = {
   ) => void;
   dropOnColumn: (columnId: string, item: DroppedPaletteItem) => void;
   dropOnRow: (rowId: string, item: DroppedPaletteItem) => void;
+  hydrateEditor: (document: {
+    screens: readonly EditorScreen[];
+    initialScreenId: string;
+    activeScreenId: string;
+    screenTrees: Readonly<Record<string, BodyNode>>;
+  }) => void;
   resetEditor: () => void;
 };
 
@@ -364,5 +370,15 @@ export const useEditorStore = create<EditorState>((set) => ({
       };
     }),
 
+  hydrateEditor: (document) =>
+    set({
+      mode: "layout",
+      screens: document.screens.map((screen) => ({ ...screen })),
+      initialScreenId: document.initialScreenId,
+      activeScreenId: document.activeScreenId,
+      activeEvent: null,
+      screenTrees: { ...document.screenTrees },
+      selection: null,
+    }),
   resetEditor: () => set(createInitialDocument()),
 }));

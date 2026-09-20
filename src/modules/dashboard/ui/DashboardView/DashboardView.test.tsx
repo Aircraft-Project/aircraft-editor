@@ -283,7 +283,7 @@ describe("DashboardView", () => {
     });
   });
 
-  it("routes open and edit actions with only the project id", async () => {
+  it("routes open and edit actions with the project id and source", async () => {
     const user = userEvent.setup();
     renderDashboard();
     await screen.findByText("Wallet Mobile");
@@ -292,7 +292,7 @@ describe("DashboardView", () => {
       screen.getAllByRole("button", { name: "Abrir" })[0],
     );
     expect(mockPush).toHaveBeenCalledWith(
-      "/editor?projectId=project-wallet",
+      "/editor?projectId=project-wallet&source=CLOUD",
     );
 
     await user.click(
@@ -301,7 +301,7 @@ describe("DashboardView", () => {
       }),
     );
     expect(mockPush).toHaveBeenLastCalledWith(
-      "/editor?projectId=project-wallet",
+      "/editor?projectId=project-wallet&source=CLOUD",
     );
   });
 
@@ -496,4 +496,7 @@ describe("DashboardView", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("alert"),
+    ).toHaveTextContent("No fue posible guardar los cambios locales");
   });});

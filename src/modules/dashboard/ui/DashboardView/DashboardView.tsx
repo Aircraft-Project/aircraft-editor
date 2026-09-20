@@ -12,6 +12,7 @@ import {
   DashboardStatCard,
   useDashboard,
 } from "@/modules/dashboard/client";
+import type { Project } from "@/modules/projects";
 import type { ProjectsService } from "@/modules/projects/client";
 import {
   CreateProjectModal,
@@ -50,6 +51,7 @@ export function DashboardView({
   const router = useRouter();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const [isNavigating, startNavigation] = useTransition();
   const logoutInProgress = useRef(false);
   const session = getCurrentSession();
@@ -61,6 +63,7 @@ export function DashboardView({
     if (logoutInProgress.current) return;
 
     logoutInProgress.current = true;
+    setLogoutError(null);
     flushSync(() => setIsLoggingOut(true));
 
     try {
@@ -70,6 +73,9 @@ export function DashboardView({
     } catch {
       logoutInProgress.current = false;
       setIsLoggingOut(false);
+      setLogoutError(
+        "No fue posible guardar los cambios locales. Reintenta antes de cerrar sesión.",
+      );
     }
   }, [logoutAction, router, startNavigation]);
 
@@ -80,10 +86,12 @@ export function DashboardView({
     projects,
     filteredProjects,
     searchQuery,
+    sourceFilter,
     canCreateProject,
     loadDashboard,
     createProject,
     setSearchQuery,
+    setSourceFilter,
     clearSearch,
   } = useDashboard({
     dashboardService,
@@ -93,8 +101,14 @@ export function DashboardView({
     autoLoad,
   });
 
-  const openProject = (projectId: string): void => {
-    router.push("/editor?projectId=" + encodeURIComponent(projectId));
+  const openProject = (project: Project): void => {
+    const source = project.source ?? "CLOUD";
+    router.push(
+      "/editor?projectId=" +
+        encodeURIComponent(project.id) +
+        "&source=" +
+        source,
+    );
   };
 
   const statSummary = summary ?? {
@@ -166,10 +180,10 @@ export function DashboardView({
       >
         {filteredProjects.map((project) => (
           <ProjectCard
-            key={project.id}
+            key={(project.source ?? "CLOUD") + ":" + project.id}
             project={project}
-            onOpen={({ id }) => openProject(id)}
-            onEdit={({ id }) => openProject(id)}
+            onOpen={openProject}
+            onEdit={openProject}
           />
         ))}
         {canCreateProject ? (
@@ -213,6 +227,12 @@ export function DashboardView({
             <p>Gestiona, edita y crear nuevos proyectos</p>
           </header>
 
+          {logoutError ? (
+            <p className={styles.persistenceError} role="alert">
+              {logoutError}
+            </p>
+          ) : null}
+
           <section
             className={styles.statsGrid}
             aria-label="Resumen de proyectos"
@@ -233,6 +253,19 @@ export function DashboardView({
               label="Publicados"
             />
           </section>
+
+          <div className={styles.sourceFilters} aria-label="Filtrar proyectos por origen">
+            {(["ALL", "LOCAL", "CLOUD"] as const).map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                aria-pressed={sourceFilter === filter}
+                onClick={() => setSourceFilter(filter)}
+              >
+                {filter === "ALL" ? "Todos" : filter === "LOCAL" ? "Locales" : "Nube"}
+              </button>
+            ))}
+          </div>
 
           {renderProjectContent()}
         </div>

@@ -44,3 +44,4 @@ next-env.d.ts
 # markdown context files (AI)
 *.md
 !electron/README.md
+!docs/aircraft-local-project-format.md

@@ -42,6 +42,7 @@ interface TriggerGraphState {
     property: string,
     value: SchemaValue,
   ) => void;
+  hydrateGraphs: (graphs: Readonly<Record<string, EditorTriggerGraph>>) => void;
   reset: () => void;
 }
 
@@ -214,6 +215,12 @@ export const useTriggerGraphStore = create<TriggerGraphState>((set) => ({
           },
         },
       };
+    }),
+
+  hydrateGraphs: (graphs) =>
+    set({
+      bindingKey: null,
+      graphs: structuredClone(graphs),
     }),
 
   reset: () =>

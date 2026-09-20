@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   defaultDevicePresetId,
 } from "@/components/organisms/LayoutCanvas/devicePresets";
@@ -23,21 +19,29 @@ import {
   ScreensWorkspace,
   TriggersWorkspace,
 } from "@/modules/editor";
+import {
+  getResourceRepository,
+  type ProjectSource,
+  useLocalProjectPersistence,
+} from "@/modules/local-project";
+import { getSession } from "@/modules/session";
+import { AircraftLoadingOverlay } from "@/shared/ui";
 import { useEditorStore } from "@/store/useEditorStore";
 import styles from "./EditorView.module.css";
 
 type EditorViewProps = {
   readonly projectId?: string;
+  readonly source?: ProjectSource;
   readonly onBackToProjects?: () => void;
   readonly schemaProvider?: SchemaProvider;
 };
 
 export function EditorView({
   projectId,
+  source = "CLOUD",
   onBackToProjects,
   schemaProvider = aircraftSchemaProvider,
 }: EditorViewProps) {
-  const projectName = projectId ?? "Mi aplicación";
   const [workspace, setWorkspace] = useState<EditorWorkspace>(
     DEFAULT_EDITOR_WORKSPACE,
   );
@@ -49,13 +53,59 @@ export function EditorView({
   const [saveAnnouncement, setSaveAnnouncement] = useState("");
   const previewButtonRef = useRef<HTMLButtonElement>(null);
   const { activeScreenId, screens, screenTrees } = useEditorStore();
+
+  const {
+    saveState,
+    projectName: persistedProjectName,
+    isHydrating,
+    loadError,
+    flush,
+  } = useLocalProjectPersistence({
+    projectId,
+    source,
+    workspace,
+    devicePresetId,
+    zoom,
+    setWorkspace,
+    setDevicePresetId,
+    setZoom,
+  });
+
+  const projectName =
+    persistedProjectName ?? projectId ?? "Mi aplicación";
   const activeScreen =
     screens.find((screen) => screen.id === activeScreenId) ?? screens[0];
-  const activeBody = screenTrees[activeScreen.id];
+  const activeBody = activeScreen
+    ? screenTrees[activeScreen.id]
+    : undefined;
 
   const returnPreviewFocus = useCallback(() => {
     previewButtonRef.current?.focus();
   }, []);
+
+  const handleSave = useCallback(async (): Promise<void> => {
+    try {
+      await flush();
+      setSaveAnnouncement("Todos los cambios locales están guardados.");
+    } catch {
+      setSaveAnnouncement(
+        "No fue posible guardar los últimos cambios. Inténtalo nuevamente.",
+      );
+    }
+  }, [flush]);
+
+  const handleBack = useCallback(async (): Promise<void> => {
+    try {
+      await flush();
+      onBackToProjects?.();
+    } catch {
+      setSaveAnnouncement(
+        "No fue posible guardar. Reintenta antes de salir del proyecto.",
+      );
+    }
+  }, [flush, onBackToProjects]);
+
+  const session = getSession();
 
   return (
     <div className={styles.view}>
@@ -63,17 +113,20 @@ export function EditorView({
         projectName={projectName}
         devicePresetId={devicePresetId}
         zoom={zoom}
+        saveState={source === "LOCAL" ? saveState : undefined}
         previewButtonRef={previewButtonRef}
-        onBack={onBackToProjects}
+        onBack={onBackToProjects ? () => void handleBack() : undefined}
         onDeviceChange={setDevicePresetId}
         onZoomChange={setZoom}
         onPreview={() => setPreviewOpen(true)}
-        onSave={() =>
-          setSaveAnnouncement(
-            "Los cambios permanecen guardados localmente durante esta sesión.",
-          )
-        }
+        onSave={source === "LOCAL" ? () => void handleSave() : undefined}
       />
+
+      {loadError ? (
+        <div role="alert" className={styles.announcement}>
+          {loadError}
+        </div>
+      ) : null}
 
       <div className={styles.body}>
         <EditorNavigation
@@ -82,7 +135,7 @@ export function EditorView({
         />
         <section
           className={styles.workspace}
-          aria-label={`Workspace ${workspace}`}
+          aria-label={"Workspace " + workspace}
         >
           {workspace === "components" ? (
             <ComponentsWorkspace
@@ -101,7 +154,13 @@ export function EditorView({
           {workspace === "triggers" ? (
             <TriggersWorkspace provider={schemaProvider} />
           ) : null}
-          {workspace === "resources" ? <ResourcesWorkspace /> : null}
+          {workspace === "resources" ? (
+            <ResourcesWorkspace
+              ownerId={source === "LOCAL" ? session?.user.id : undefined}
+              projectId={source === "LOCAL" ? projectId : undefined}
+              repository={getResourceRepository()}
+            />
+          ) : null}
         </section>
       </div>
 
@@ -109,7 +168,7 @@ export function EditorView({
         {saveAnnouncement}
       </p>
 
-      {previewOpen ? (
+      {previewOpen && activeScreen && activeBody ? (
         <PreviewDialog
           body={activeBody}
           devicePresetId={devicePresetId}
@@ -118,6 +177,12 @@ export function EditorView({
           returnFocus={returnPreviewFocus}
         />
       ) : null}
+
+      <AircraftLoadingOverlay
+        open={isHydrating}
+        title="Abriendo proyecto local..."
+        description="Recuperando tus pantallas y recursos."
+      />
     </div>
   );
 }

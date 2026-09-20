@@ -227,3 +227,44 @@
     animation: none;
   }
 }
+
+.sourceFilters {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.55rem;
+  margin: -0.6rem 0 1.25rem;
+}
+
+.sourceFilters button {
+  min-height: 36px;
+  padding: 0 0.95rem;
+  border: 1px solid rgba(68, 151, 238, 0.32);
+  border-radius: 999px;
+  color: rgba(219, 238, 255, 0.78);
+  font: inherit;
+  background: rgba(5, 31, 59, 0.72);
+  cursor: pointer;
+}
+
+.sourceFilters button[aria-pressed="true"] {
+  border-color: rgba(22, 217, 255, 0.72);
+  color: #ffffff;
+  background: rgba(0, 122, 255, 0.28);
+}
+
+.sourceFilters button:focus-visible {
+  outline: 2px solid #16d9ff;
+  outline-offset: 2px;
+}
+
+.persistenceError {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid rgba(255, 184, 74, 0.45);
+  border-radius: 0.75rem;
+  color: #ffe2ad;
+  background: rgba(85, 49, 7, 0.34);
+}

@@ -12,8 +12,10 @@ export type {
   Project,
   ProjectAccent,
   ProjectIconType,
+  ProjectSource,
   ProjectStatus,
   ProjectSummary,
+  ProjectSyncState,
 } from "./domain/project";
 export { filterProjects } from "./domain/filterProjects";
 export { calculateProjectSummary } from "./domain/calculateProjectSummary";
