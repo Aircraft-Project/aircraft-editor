@@ -39,6 +39,15 @@ export function registerLocalProjectIpc(userDataPath: string): void {
   ipcMain.handle(LOCAL_PROJECT_CHANNELS.saveTriggerGraphs, (_event, request: unknown) =>
     store.saveTriggerGraphs(request),
   );
+  ipcMain.handle(LOCAL_PROJECT_CHANNELS.saveCatalogItem, (_event, request: unknown) =>
+    store.saveCatalogItem(request),
+  );
+  ipcMain.handle(LOCAL_PROJECT_CHANNELS.deleteCatalogItem, (_event, request: unknown) =>
+    store.deleteCatalogItem(request),
+  );
+  ipcMain.handle(LOCAL_PROJECT_CHANNELS.saveTheme, (_event, request: unknown) =>
+    store.saveTheme(request),
+  );
   ipcMain.handle(LOCAL_PROJECT_CHANNELS.saveSettings, (_event, request: unknown) =>
     store.saveSettings(request),
   );

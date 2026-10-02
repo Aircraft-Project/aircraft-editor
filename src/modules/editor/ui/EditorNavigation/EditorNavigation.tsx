@@ -13,6 +13,7 @@ import styles from "./EditorNavigation.module.css";
 interface EditorNavigationProps {
   readonly activeWorkspace: EditorWorkspace;
   readonly onChange: (workspace: EditorWorkspace) => void;
+  readonly disabledWorkspaces?: readonly EditorWorkspace[];
 }
 
 const items = [
@@ -25,11 +26,13 @@ const items = [
 export function EditorNavigation({
   activeWorkspace,
   onChange,
+  disabledWorkspaces = [],
 }: EditorNavigationProps) {
   return (
     <nav className={styles.navigation} aria-label="Módulos del Editor">
       {items.map(({ id, label, icon: Icon }) => {
         const active = activeWorkspace === id;
+        const disabled = disabledWorkspaces.includes(id);
         return (
           <button
             key={id}
@@ -38,6 +41,7 @@ export function EditorNavigation({
               .filter(Boolean)
               .join(" ")}
             aria-current={active ? "page" : undefined}
+            disabled={disabled}
             onClick={() => onChange(id)}
           >
             <Icon aria-hidden="true" size={21} />

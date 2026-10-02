@@ -66,7 +66,9 @@ export interface ScreenDocument extends DocumentVersion {
   readonly screenId: string;
   readonly name: string;
   readonly description: string;
-  readonly context: string;
+  readonly destination: string;
+  readonly context: "interface";
+  readonly mcpMetadata?: Readonly<Record<string, string>>;
   readonly isInitial: boolean;
   readonly order: number;
   readonly extensions?: Readonly<Record<string, SchemaValue>>;
@@ -78,12 +80,21 @@ export interface LayoutDocument extends DocumentVersion {
   readonly extensions?: Readonly<Record<string, SchemaValue>>;
 }
 
+export interface TriggerPersistenceMetadata {
+  readonly localRuntime?: boolean;
+  readonly pilotRuntime?: boolean;
+  readonly globalRuntime?: boolean;
+  readonly extensions?: Readonly<Record<string, SchemaValue>>;
+}
+
 export interface TriggerGraphNodeDocument {
   readonly id: string;
-  readonly kind: "event" | "trigger";
+  readonly kind: "trigger";
   readonly type: string;
   readonly label: string;
   readonly properties: Readonly<Record<string, SchemaValue>>;
+  readonly mcpMetadata?: Readonly<Record<string, string>>;
+  readonly persistence?: TriggerPersistenceMetadata;
 }
 
 export interface TriggerGraphEdgeDocument {
@@ -93,9 +104,12 @@ export interface TriggerGraphEdgeDocument {
 }
 
 export interface TriggerGraphBindingDocument {
+  readonly rootVertexId: string | null;
   readonly nodes: readonly TriggerGraphNodeDocument[];
   readonly edges: readonly TriggerGraphEdgeDocument[];
   readonly selectedNodeId: string | null;
+  readonly mcpMetadata?: Readonly<Record<string, string>>;
+  readonly extensions?: Readonly<Record<string, SchemaValue>>;
 }
 
 export interface TriggerGraphDocument extends DocumentVersion {
@@ -136,14 +150,84 @@ export interface ProjectSettingsDocument extends DocumentVersion {
   readonly extensions?: Readonly<Record<string, SchemaValue>>;
 }
 
+export interface CatalogItemDocument extends DocumentVersion {
+  readonly catalogItemId: string;
+  readonly name: string;
+  readonly destination: string;
+  readonly context: "catalog-item";
+  readonly mcpMetadata?: Readonly<Record<string, string>>;
+  readonly layout: BodyNode;
+  readonly extensions?: Readonly<Record<string, SchemaValue>>;
+}
+
+export interface ThemeTextStyle {
+  readonly fontSize?: number;
+  readonly fontWeight?: number;
+  readonly lineHeight?: number;
+  readonly letterSpacing?: number;
+  readonly extensions?: Readonly<Record<string, SchemaValue>>;
+}
+
+export interface ThemeConfig {
+  readonly colors?: Readonly<Record<string, string>>;
+  readonly typography?: Readonly<Record<string, ThemeTextStyle>>;
+  readonly spacing?: Readonly<Record<string, number>>;
+  readonly shapes?: Readonly<Record<string, number>>;
+  readonly extensions?: Readonly<Record<string, SchemaValue>>;
+}
+
+export interface TextFieldComponentTheme {
+  readonly errorColor?: string;
+  readonly focusedBorderColor?: string;
+  readonly unfocusedBorderColor?: string;
+  readonly focusedLabelColor?: string;
+  readonly unfocusedLabelColor?: string;
+  readonly cursorColor?: string;
+  readonly focusedContainerColor?: string;
+  readonly unfocusedContainerColor?: string;
+  readonly disabledContainerColor?: string;
+  readonly disabledTextColor?: string;
+  readonly errorIndicatorColor?: string;
+  readonly warningColor?: string;
+  readonly warningIndicatorColor?: string;
+  readonly shape?: string;
+  readonly extensions?: Readonly<Record<string, SchemaValue>>;
+}
+
+export interface TextLabelComponentTheme {
+  readonly textColorDefault?: string;
+  readonly textColorError?: string;
+  readonly textColorOk?: string;
+  readonly textColorWarning?: string;
+  readonly textStyle?: string;
+  readonly paddingHorizontal?: number | null;
+  readonly paddingVertical?: number | null;
+  readonly extensions?: Readonly<Record<string, SchemaValue>>;
+}
+
+export interface ComponentThemeConfig {
+  readonly textField?: TextFieldComponentTheme;
+  readonly textLabel?: TextLabelComponentTheme;
+  readonly extensions?: Readonly<Record<string, SchemaValue>>;
+}
+
+export interface ThemeDocument extends DocumentVersion {
+  readonly projectId: string;
+  readonly theme: ThemeConfig;
+  readonly componentTheme: ComponentThemeConfig;
+  readonly extensions?: Readonly<Record<string, SchemaValue>>;
+}
+
 export interface AircraftProject {
   readonly manifest: ProjectManifest;
   readonly metadata: ProjectMetadata;
   readonly screens: readonly ScreenDocument[];
   readonly layouts: Readonly<Record<string, LayoutDocument>>;
   readonly triggerGraphs: Readonly<Record<string, TriggerGraphDocument>>;
+  readonly catalogItems: readonly CatalogItemDocument[];
   readonly resources: ResourceManifest;
   readonly settings: ProjectSettingsDocument;
+  readonly theme: ThemeDocument;
 }
 
 export interface CreateLocalProjectInput {

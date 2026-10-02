@@ -48,14 +48,17 @@ Local storage fails closed when `safeStorage.isEncryptionAvailable()` is false. 
                     │   └── <screenId>.airlayout
                     ├── triggers/
                     │   └── <screenId>.airgraph
+                    ├── catalog-items/
+                    │   └── <catalogItemId>.aircatalog
                     ├── resources/
                     │   ├── manifest.airres
                     │   └── <sha256>.airblob
                     └── settings/
-                        └── project.airsettings
+                        ├── project.airsettings
+                        └── theme.airtheme
 ```
 
-Every `projectId`, `screenId`, and resource ID used to construct a path must match `[A-Za-z0-9][A-Za-z0-9_-]{0,127}`. Renderer input can never select a physical path.
+Every `projectId`, `screenId`, `catalogItemId`, and resource ID used to construct a path must match `[A-Za-z0-9][A-Za-z0-9_-]{0,127}`. Renderer input can never select a physical path.
 
 ## File responsibilities
 
@@ -69,6 +72,8 @@ Every `projectId`, `screenId`, and resource ID used to construct a path must mat
 | `manifest.airres` | 6 | `ResourceManifest` |
 | `project.airsettings` | 7 | `ProjectSettingsDocument` |
 | `*.airblob` | 8 | Original resource bytes |
+| `*.aircatalog` | 9 | `CatalogItemDocument` |
+| `theme.airtheme` | 10 | `ThemeDocument` |
 
 Extensions aid recognition; they do not provide security. Every file has an authenticated Aircraft envelope.
 
@@ -80,7 +85,7 @@ All persisted files use this layout:
 |---:|---:|---|
 | 0 | 8 | ASCII magic `AIRCRFT1` |
 | 8 | 1 | Envelope version (`1`) |
-| 9 | 1 | Document type (`1..8`) |
+| 9 | 1 | Document type (`1..10`) |
 | 10 | 2 | Project format version, unsigned big-endian (`1`) |
 | 12 | 1 | Encryption version (`1` = AES-256-GCM) |
 | 13 | 1 | Payload encoding (`1` = MessagePack, `2` = raw bytes) |
@@ -170,6 +175,7 @@ The schema values come from `SchemaProvider.getManifest()` when a project is cre
   "screenId": "screen-home",
   "name": "Home",
   "description": "Pantalla principal",
+  "destination": "home",
   "context": "interface",
   "isInitial": true,
   "order": 0
@@ -183,62 +189,157 @@ Screen documents contain screen metadata only. Layout structure lives separately
 ```json
 {
   "documentVersion": 1,
-  "screenId": "screen-home",
+  "screenId": "1a2b3c4d5e6f7081",
   "tree": {
-    "id": "body-home",
+    "id": "2a2b3c4d5e6f7081",
     "kind": "body",
+    "properties": {
+      "cardPadding": 16,
+      "cardBackgroundColor": "FFFFFF"
+    },
     "columns": [
       {
-        "id": "column-main",
+        "id": "3a2b3c4d5e6f7081",
         "kind": "column",
-        "weight": 1,
-        "rows": []
+        "properties": {
+          "padding": 8,
+          "scrollable": false
+        },
+        "rows": [
+          {
+            "id": "4a2b3c4d5e6f7081",
+            "kind": "row",
+            "content": "component",
+            "height": 240,
+            "properties": {
+              "horizontalArrangement": "Center"
+            },
+            "component": {
+              "id": "5a2b3c4d5e6f7081",
+              "kind": "component",
+              "type": "Button",
+              "subtype": "Primary",
+              "name": "Continue",
+              "properties": { "text": "Continue" },
+              "observers": [
+                { "observerIdentifier": "profile-observer" }
+              ],
+              "mcpMetadata": { "source": "authoring" }
+            }
+          }
+        ]
       }
     ]
   }
 }
 ```
 
-The `tree` is the current Editor `BodyNode`. Component IDs, technical component types such as `Button`, subtypes, and properties are preserved inside row/component nodes. Friendly labels are presentation-only.
+The `tree` is the Editor `BodyNode`. Known structural semantics are typed: Body preserves `cardPadding`, `cardBackgroundColor`, `viewType`, and `identifier`; Column preserves only the Assembler properties `padding` and `scrollable`; Row preserves `padding`, `horizontalArrangement`, and `verticalAlignment`. Unknown schema-compatible properties and explicit `extensions` remain lossless through hydration and unrelated autosaves.
+
+H-3 is encoded as a discriminated union. A row is `empty`, contains exactly one `component`, or contains one-or-more `columns`. It can never semantically contain both, and it cannot contain two components. Valid legacy `children` arrays normalize to this union. Ambiguous legacy rows fail with `AircraftProjectSemanticError` rather than dropping content.
+
+Row sizing follows H-11: `height` and `weight` are mutually exclusive. `wrap_content`, `match_parent`, numeric dp heights, and numeric row weight map deterministically to Assembler `HeightValue`. Vertical Catalog rows additionally follow H-10: they have weight and no height. H-9 rejects a vertical Catalog below a scrollable Column.
+
+`Column.weight` is not an Assembler property and is not part of the semantic layout. A legacy value is retained only as `ColumnNode.editorMetadata.legacyWeight`; it does not affect the runtime-faithful preview and is never presented as Assembler semantics. Column siblings therefore use the runtime's equal-share behavior. No format-version bump is needed because the encrypted envelope and document version are unchanged.
+
+Component technical types, subtypes, properties, `observers`, string-to-string `mcpMetadata`, and explicit node `extensions` remain exact. New semantic identifiers use 16 lowercase hexadecimal characters and are checked against current screen, layout, catalog, and trigger identifiers before insertion.
 
 ### TriggerGraphDocument — `triggers/<screenId>.airgraph`
 
 ```json
 {
   "documentVersion": 1,
-  "screenId": "screen-home",
+  "screenId": "1a2b3c4d5e6f7081",
   "graphs": {
-    "screen-home:button-main:on-clic-event": {
+    "1a2b3c4d5e6f7081:5a2b3c4d5e6f7081:on-clic-event": {
+      "rootVertexId": "6a2b3c4d5e6f7081",
       "nodes": [
         {
-          "id": "event-click",
-          "kind": "event",
-          "type": "on-clic-event",
-          "label": "Click",
-          "properties": {}
-        },
-        {
-          "id": "navigate-home",
+          "id": "6a2b3c4d5e6f7081",
           "kind": "trigger",
           "type": "Navigation",
           "label": "Navigation",
-          "properties": {}
+          "properties": {
+            "type": "Navigate",
+            "target": "1a2b3c4d5e6f7081"
+          },
+          "mcpMetadata": { "source": "authoring" }
         }
       ],
-      "edges": [
-        {
-          "id": "event-to-navigation",
-          "source": "event-click",
-          "target": "navigate-home"
-        }
-      ],
-      "selectedNodeId": "navigate-home"
+      "edges": [],
+      "selectedNodeId": "6a2b3c4d5e6f7081",
+      "mcpMetadata": { "graph": "main" }
     }
   }
 }
 ```
 
-Each screen file contains every binding for that screen. A binding key is `encodeURIComponent(screenId):encodeURIComponent(componentId):encodeURIComponent(eventType)`. The technical event identifier is preserved exactly (for example, `on-clic-event`), as are trigger identifiers such as `ApiService`, `Navigation`, `Conditional`, and `StringEngine`. Friendly labels are presentation-only. Edges are not constrained to a DAG, so cycles remain representable.
+Each screen file contains every binding for that screen. A binding key is `encodeURIComponent(screenId):encodeURIComponent(componentId):encodeURIComponent(eventType)`. Persisted nodes are TriggerVertices only. ReactFlow derives a visual Event node and exactly one visual Event-to-root edge; neither is serialized as a TriggerVertex or semantic adjacency edge.
+
+A non-empty graph has exactly one `rootVertexId`, that vertex exists, every successor exists, and every vertex is reachable from the root. Cycles, including self-cycles, remain valid and are not converted into a DAG. Legacy graphs with exactly one Event output derive the root; multiple Event outputs fail with a controlled semantic error. `selectedNodeId` remains Editor metadata. Trigger identifiers, persistence flags, string-to-string `mcpMetadata`, and explicit graph/document `extensions` survive unrelated autosaves.
+
+### CatalogItemDocument — `catalog-items/<catalogItemId>.aircatalog`
+
+```json
+{
+  "documentVersion": 1,
+  "catalogItemId": "movie-card",
+  "name": "movie-card",
+  "destination": "movie-card",
+  "context": "catalog-item",
+  "layout": {
+    "id": "catalog-body",
+    "kind": "body",
+    "properties": {},
+    "columns": []
+  }
+}
+```
+
+A catalog item is edited separately from the Screens workspace and maps to an Assembler `InterfaceDocument` with `DocumentContext.CATALOG_ITEM`. The local format retains `destination` for backward compatibility and may default it deterministically to `catalogItemId`, but it is not part of the interface M-5 namespace. Aircraft YAML identifies a catalog item through its identifier/name and emits only its body at the document root; a future Engine/YamlSerializer must not emit the local `destination` as a root `CATALOG_ITEM` property. Catalog context rules come from `SchemaProvider.getContextRules("catalog-item")`; when `supportsTriggers` is false, the Editor disables Trigger workspace access for that item.
+
+### ThemeDocument — `settings/theme.airtheme`
+
+```json
+{
+  "documentVersion": 1,
+  "projectId": "a4d0d1d7-75b2-42ad-91c7-86f985a5447b",
+  "theme": {
+    "colors": {
+      "primary": "00CFFF",
+      "onPrimary": "FFFFFF"
+    },
+    "typography": {
+      "titleLarge": {
+        "fontSize": 22,
+        "fontWeight": 700,
+        "lineHeight": 28,
+        "letterSpacing": 0
+      }
+    },
+    "spacing": {
+      "medium": 16
+    },
+    "shapes": {
+      "medium": 12
+    }
+  },
+  "componentTheme": {
+    "textField": {
+      "focusedBorderColor": "$colors.primary",
+      "shape": "$shapes.medium"
+    },
+    "textLabel": {
+      "textColorDefault": "$colors.onPrimary",
+      "textStyle": "$typography.titleLarge",
+      "paddingHorizontal": 16,
+      "paddingVertical": null
+    }
+  }
+}
+```
+
+Known theme sections (`colors`, `typography`, `spacing`, and `shapes`) and current TextField/TextLabel component-theme fields are typed. Their token keys remain data-driven records, and explicit `extensions` containers preserve future metadata without replacing known fields with an untyped blob. Theme currently has no full editing UI; changes to unrelated documents must not rewrite or discard it.
 
 ### ResourceManifest — `resources/manifest.airres`
 
@@ -282,9 +383,11 @@ Only durable project preferences are stored. Hover, open tooltip/modal, loading 
 
 | Editor state | Persisted document |
 |---|---|
-| Screen names, descriptions, order, initial screen | `screens/*.airscreen` |
+| Screen names, descriptions, destination, order, initial screen | `screens/*.airscreen` |
 | Layout tree, rows, columns, components and properties | `layouts/*.airlayout` |
-| Graphs keyed by screen/component/event | `triggers/*.airgraph` |
+| Graphs keyed by screen/component/event, including trigger persistence | `triggers/*.airgraph` |
+| Catalog-item InterfaceDocuments and layouts | `catalog-items/*.aircatalog` |
+| Aircraft theme and component themes | `settings/theme.airtheme` |
 | Resource metadata | `resources/manifest.airres` |
 | Original resource bytes | `resources/*.airblob` |
 | Active screen/workspace/device/zoom | `settings/project.airsettings` |
@@ -292,7 +395,7 @@ Only durable project preferences are stored. Hover, open tooltip/modal, loading 
 
 ## Create and load lifecycle
 
-Creation writes the root manifest, metadata, initial Home screen/layout, empty resource manifest, and project settings. The schema version is copied from the active `SchemaProvider`; cloud APIs are not called.
+Creation writes the root manifest, metadata, initial Home screen/layout, empty resource manifest, empty typed theme, and project settings; it also creates the catalog-items directory. The schema version is copied from the active `SchemaProvider`; cloud APIs are not called.
 
 Loading performs:
 
@@ -301,7 +404,7 @@ Loading performs:
 3. Load or unprotect the installation master key.
 4. Derive the owner and project keys.
 5. Authenticate/decrypt the root manifest and verify owner, project ID, and format version.
-6. Decrypt/decode metadata, screens, layouts, graphs, resources, and settings.
+6. Decrypt/decode metadata, screens, layouts, graphs, catalog items, theme, resources, and settings.
 7. Return typed domain data through restricted IPC.
 8. Hydrate Editor and Trigger Graph stores before enabling autosave.
 
@@ -311,13 +414,13 @@ Project listing deliberately does not run the full load lifecycle. It authentica
 
 ## Internal project provisioning
 
-`InternalProjectProvisioner` materializes a typed `InternalProjectSeed` through the same `LocalProjectRepository` and `ResourceRepository` contracts used by the product. The seed can define project metadata, screens with layouts and graph bindings, durable settings, and raw `Uint8Array` resources. Repository composition decides whether the target is the in-memory test implementation or the real Electron pipeline.
+`InternalProjectProvisioner` materializes a typed `InternalProjectSeed` through the same `LocalProjectRepository` and `ResourceRepository` contracts used by the product. The seed can define project metadata, screens with layouts and graph bindings, catalog items, theme/component theme, durable settings, and raw `Uint8Array` resources. Repository composition decides whether the target is the in-memory test implementation or the real Electron pipeline.
 
 The provisioner never accepts encryption keys, filesystem paths, YAML, or legacy project input. With Electron repositories, Main still owns MessagePack serialization, key derivation, AES-GCM encryption, resource hashing, atomic writes, and directory selection. If provisioning fails, the newly created project is removed on a best-effort basis while the original error is preserved. This API is intended for controlled internal generation and test fixtures; it is not an import feature and has no product UI.
 
 ## Save lifecycle
 
-`AutosaveCoordinator` uses a 750 ms default debounce and serializes/coalesces writes by document key. Current keys include `screen:<screenId>`, `layout:<screenId>`, `graphs:<screenId>`, and `settings`.
+`AutosaveCoordinator` uses a 750 ms default debounce and serializes/coalesces writes by document key. Current keys include `screen:<screenId>`, `layout:<screenId>`, `graphs:<screenId>`, `catalog-item:<catalogItemId>`, and `settings`. Catalog writes and deletes are granular. Theme is preserved by project load/save but is not autosaved until a theme editor owns that state.
 
 A successful write updates manifest and metadata `updatedAt`. A failed write remains pending, produces `ERROR`, and can be retried by the Save action. Manual Save and logout call `flush()`. Logout does not clear the session when flush fails.
 
@@ -365,11 +468,72 @@ Web mode uses in-memory repositories for development and tests. It does not clai
 - Unavailable OS key protection: reject with `LocalStorageUnavailableError` and write no plaintext project.
 - A corrupt project is isolated; Electron stays running and the UI reports that the local project could not be opened.
 
+## Backward compatibility within version 1
+
+The compatibility additions remain `projectFormatVersion = 1` and `documentVersion = 1` because they add optional documents/fields without changing the encrypted envelope or existing payload meaning:
+
+- a missing `catalog-items/` directory loads as an empty catalog;
+- a missing `settings/theme.airtheme` loads as an empty typed theme for that project;
+- a legacy screen without `destination` hydrates with `screenId` as its deterministic destination;
+- missing Body/Column/Row `properties` maps hydrate as `{}`;
+- legacy rows containing both height and weight normalize deterministically to weight under H-11;
+- legacy `Column.weight` is retained only as non-semantic `editorMetadata.legacyWeight`;
+- valid legacy row `children` normalize to the H-3 union, while mixed/multiple-component rows fail explicitly;
+- legacy trigger graphs with one Event output derive `rootVertexId`; multiple outputs fail explicitly;
+- missing trigger persistence means no explicit runtime flag selection.
+
+Missing optional data is not corruption. Authentication failure, unsupported versions, or malformed required identities still fail with controlled errors. A future incompatible representation must increment the relevant version and use an explicit migration.
+
+## Assembler semantic invariants
+
+Aircraft Editor performs a focused preflight before internal provisioning and exposes the same checks for persisted project documents. It is intentionally not a TypeScript copy of the Assembler: the future Kotlin Engine/Assembler remains the final authority.
+
+- **H-3:** Row is empty, one Component, or one-or-more Columns; ambiguous legacy data is rejected losslessly.
+- **H-9:** a scrollable Column cannot contain a vertical Catalog anywhere in its subtree.
+- **H-10:** a Row containing a vertical Catalog has weight and no height.
+- **H-11:** Row height and weight are mutually exclusive.
+- **D-2…D-5:** non-empty trigger graphs have an existing root, valid successors, and complete reachability; cycles remain valid.
+- **M-1…M-5 and M-8:** at least one interface exists, exactly one initial interface and its layout exist, interface names/identifiers and destinations are valid, and CatalogItem identifiers are unique.
+- **T-4:** Body, Column, Row, Component, and TriggerVertex identifiers share one namespace per InterfaceDocument. Graphs of the same interface share that namespace; different interfaces may reuse internal identifiers. Each CatalogItem has its own Body/Column/Row/Component namespace.
+- **M-6 / M-7:** existing Navigation targets and Catalog item views must resolve. Missing `target` or `itemView` belongs to future schema/trigger validation and is not reported as M-6/M-7.
+- **CatalogItem identity:** `catalogItemId === name` for `context = "catalog-item"`; normal screens are strictly `context = "interface"`.
+- **M-5 / Interface destination:** non-empty, trimmed, one segment, contains neither `/` nor `\`, and is unique only among InterfaceDocuments. `CatalogItemDocument.destination` remains local compatibility data and does not participate in M-5.
+
+`InternalProjectProvisioner` validates all documents supplied by the seed before the first repository write. When screens are omitted it performs partial validation of supplied CatalogItems; an explicit `activeScreenId` without screens is rejected before creation. Full interface-reference validation requires the concrete screen documents. `SchemaProvider` remains the source of component, event, trigger, property, and ContextRules catalogs; only verified cross-schema Assembler invariants are encoded directly.
+
+`mcpMetadata` is `Readonly<Record<string, string>>` on Interface/Body/Column/Row/Component/TriggerGraph/TriggerVertex equivalents. Component observers are persisted as `{ observerIdentifier }` references. Screen, layout, trigger document, settings, manifest, metadata, catalog, theme, resource, graph, and node extension containers remain sidecar/domain data when the UI does not understand them, preventing unrelated edits from erasing future fields.
+
+Known gap: aircraft-android runtime can understand per-side padding properties such as `paddingTop`, `paddingBottom`, `paddingStart`, and `paddingEnd` in places where the current Assembler model is narrower. The Editor preserves those schema-compatible properties losslessly but does not invent a mapping. Aligning that model/runtime gap belongs in a future aircraft-android task.
+## Relationship with aircraft-android / Assembler
+
+The encrypted `.air*` directory is the physical persistence format owned by Aircraft Editor. It is not a second Aircraft language. aircraft-android/Assembler remains the semantic reference for interfaces, catalog items, Body/Column/Row structure, components, trigger graphs, persistence flags, theme, schema, and context rules.
+
+The deterministic future Engine mapping is:
+
+| Editor persisted model | Assembler semantic model |
+|---|---|
+| `ScreenDocument.screenId` | `InterfaceDocument.identifier` |
+| `ScreenDocument.destination` | `InterfaceDocument.destination` |
+| Screen name + `LayoutDocument.tree` | `InterfaceDocument.name` + `body` |
+| `ScreenDocument.context = "interface"` | `DocumentContext.INTERFACE` |
+| `CatalogItemDocument.catalogItemId` | `InterfaceDocument.identifier` |
+| `CatalogItemDocument.name` + `layout` | `InterfaceDocument.name` + `body` |
+| `CatalogItemDocument.destination` | Aircraft Editor local/backward-compatibility metadata; no mapping to `InterfaceDocument.destination` for `CATALOG_ITEM`, and not serialized as a root YAML property |
+| `CatalogItemDocument.context = "catalog-item"` | `DocumentContext.CATALOG_ITEM` |
+| `ThemeDocument.theme` | Assembler `ThemeConfigData` |
+| `ThemeDocument.componentTheme` | Assembler `ComponentThemeConfigData` |
+
+Screen-only Editor metadata such as description, initial-screen marker, and order remains project authoring metadata unless the future Engine has an explicit runtime target for it. `ProjectSettingsDocument` fields such as active workspace, preview device, zoom, and active selection are UI-only and do not belong in Aircraft YAML.
+
+Components, events, triggers, and `ContextRules` continue to come from `SchemaProvider`; no parallel catalog is introduced. Technical type/subtype/event/trigger identifiers are preserved exactly. Known semantic fields are typed, while explicit property/extension maps retain Aircraft data that the current UI cannot edit so unrelated autosaves do not erase it.
+
+A future Aircraft Engine/JVM integration will translate these persisted models to the real Assembler model. YAML generation will be delegated to the Kotlin `YamlSerializer`; Aircraft Editor intentionally contains no TypeScript YAML serializer, importer, or project-specific converter.
+
 ## Evolution
 
 `projectFormatVersion` and each `documentVersion` are explicit migration points. Version 1 rejects unsupported future versions; no migrations exist yet. Optional `extensions` fields are reserved for forward-compatible metadata while fundamental fields remain typed.
 
-Out of scope for this format phase: YAML import, legacy project conversion, cloud synchronization, AWS/S3, Aircraft Engine/JVM, Assembler, Conformance, ADB/USB, and global cross-user resource deduplication.
+Out of scope for this format phase: YAML import/export in TypeScript, legacy project conversion, cloud synchronization, AWS/S3, Aircraft Engine/JVM runtime integration, Assembler execution, Conformance execution, ADB/USB, and global cross-user resource deduplication.
 
 ## Verification checklist
 
@@ -377,6 +541,9 @@ Out of scope for this format phase: YAML import, legacy project conversion, clou
 - [ ] Structured files do not expose known project strings in plaintext.
 - [ ] Tampering causes authenticated decryption failure.
 - [ ] Resource bytes round-trip exactly and equal bytes produce one blob.
-- [ ] Reload restores screens, layouts, graphs, resources, and settings.
+- [ ] Reload restores destinations, structural layout properties, catalog items, themes, graphs, resources, and settings.
+- [ ] Height/weight remains H-11 compliant across hydrate, edit, autosave, and reopen.
+- [ ] Catalog context rules disable unsupported trigger editing.
+- [ ] Unknown schema-compatible properties and explicit extensions survive unrelated edits.
 - [ ] A failed local flush blocks logout.
 - [ ] Web mode remains in-memory and does not import Node/Electron APIs.

@@ -9,6 +9,11 @@ import type {
 import {
   useTriggerGraphStore,
 } from "@/modules/editor";
+import {
+  createComponentNode,
+  createEmptyBody,
+  createRowNode,
+} from "@/modules/screens/layoutTree";
 import { useEditorStore } from "@/store/useEditorStore";
 import { EditorView } from "./EditorView";
 
@@ -27,6 +32,20 @@ const components: readonly ComponentSchema[] = [
       },
     ],
     effectiveEvents: [{ type: "on-change-event" }],
+  },
+  {
+    type: "Catalog",
+    description: "Catalog component",
+    subtypes: [{ type: "List" }],
+    contexts: ["interface"],
+    properties: [
+      {
+        name: "itemView",
+        valueType: { kind: "string", raw: "string" },
+        required: true,
+      },
+    ],
+    effectiveEvents: [{ type: "on-click-event" }],
   },
   {
     type: "TextLabel",
@@ -62,7 +81,7 @@ const triggers: readonly TriggerSchema[] = [
 const contexts: readonly ContextRules[] = [
   {
     context: "interface",
-    allowedComponentTypes: ["ExperimentalWidget", "TextLabel"],
+    allowedComponentTypes: ["ExperimentalWidget", "Catalog", "TextLabel"],
     supportsTriggers: true,
     supportsObservers: true,
   },
@@ -189,29 +208,53 @@ describe("EditorView schema-driven workspaces", () => {
     );
   });
 
-  it("uses context rules to restrict catalog-item and disable triggers", async () => {
+  it("edits catalog items inside Components without exposing them as screens or triggers", async () => {
     const user = userEvent.setup();
-    render(<EditorView schemaProvider={createProvider()} />);
+    const component = createComponentNode("Catalog", "List", 1, {
+      itemView: "movie-card",
+    });
+    const body = createEmptyBody();
+    body.columns[0].rows = [createRowNode([component])];
+    useEditorStore.setState((state) => ({
+      screenTrees: { ...state.screenTrees, [state.activeScreenId]: body },
+      catalogItems: [
+        {
+          id: "movie-card",
+          name: "movie-card",
+          destination: "movie-card",
+          context: "catalog-item",
+          layout: createEmptyBody(),
+        },
+      ],
+      selection: { kind: "component", id: component.id },
+    }));
+    const provider = createProvider();
+    render(<EditorView schemaProvider={provider} />);
 
-    await user.click(screen.getByRole("button", { name: "Pantallas" }));
     await user.click(
-      screen.getByRole("button", { name: "Nueva pantalla" }),
+      await screen.findByRole("button", {
+        name: "Editar vista del catálogo",
+      }),
     );
-    await user.type(screen.getByLabelText("Nombre"), "Item");
-    await user.selectOptions(
-      screen.getByLabelText("Tipo de pantalla"),
-      "catalog-item",
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Crear pantalla" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Componentes" }));
 
-    expect(await screen.findByText("Etiqueta de texto")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Editando vista de catálogo: movie-card"),
+    ).toBeInTheDocument();
+    expect(provider.getContextRules).toHaveBeenCalledWith("catalog-item");
+    expect(screen.getByText("Etiqueta de texto")).toBeInTheDocument();
     expect(screen.queryByText("ExperimentalWidget")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Triggers" })).toBeDisabled();
 
-    await user.click(screen.getByRole("button", { name: "Triggers" }));
-    expect(screen.getByText("Triggers no disponibles")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Volver a la pantalla" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Triggers" })).toBeEnabled(),
+    );
+    await user.click(screen.getByRole("button", { name: "Pantallas" }));
+    expect(
+      screen.queryByRole("button", { name: /movie-card/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("changes device and opens an accessible blocking preview dialog", async () => {

@@ -46,3 +46,20 @@ export class ResourceNotFoundError extends Error {
     this.name = "ResourceNotFoundError";
   }
 }
+
+export interface AircraftSemanticIssue {
+  readonly code: string;
+  readonly message: string;
+  readonly path?: string;
+}
+
+export class AircraftProjectSemanticError extends Error {
+  constructor(readonly issues: readonly AircraftSemanticIssue[]) {
+    super(
+      issues.length === 1
+        ? issues[0].message
+        : `Aircraft project has ${issues.length} semantic errors.`,
+    );
+    this.name = "AircraftProjectSemanticError";
+  }
+}

@@ -24,6 +24,7 @@ interface DynamicComponentInspectorProps {
   readonly onRename: (name: string) => void;
   readonly onPropertyChange: (name: string, value: SchemaValue) => void;
   readonly onSelectEvent: (event: string) => void;
+  readonly onEditCatalogItem?: () => void;
 }
 
 export function DynamicComponentInspector({
@@ -33,6 +34,7 @@ export function DynamicComponentInspector({
   onRename,
   onPropertyChange,
   onSelectEvent,
+  onEditCatalogItem,
 }: DynamicComponentInspectorProps) {
   const [schema, setSchema] = useState<ComponentSchema | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
@@ -104,6 +106,18 @@ export function DynamicComponentInspector({
           />
         </label>
       </section>
+
+      {onEditCatalogItem ? (
+        <section className={styles.inspectorSection}>
+          <button
+            type="button"
+            className={styles.eventButton}
+            onClick={onEditCatalogItem}
+          >
+            Editar vista del catálogo
+          </button>
+        </section>
+      ) : null}
 
       <section className={styles.inspectorSection}>
         <h3>Propiedades</h3>

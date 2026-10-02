@@ -22,6 +22,12 @@ const api: AircraftDesktopApi = {
       ipcRenderer.invoke(LOCAL_PROJECT_CHANNELS.saveLayout, request),
     saveTriggerGraphs: (request) =>
       ipcRenderer.invoke(LOCAL_PROJECT_CHANNELS.saveTriggerGraphs, request),
+    saveCatalogItem: (request) =>
+      ipcRenderer.invoke(LOCAL_PROJECT_CHANNELS.saveCatalogItem, request),
+    deleteCatalogItem: (request) =>
+      ipcRenderer.invoke(LOCAL_PROJECT_CHANNELS.deleteCatalogItem, request),
+    saveTheme: (request) =>
+      ipcRenderer.invoke(LOCAL_PROJECT_CHANNELS.saveTheme, request),
     saveSettings: (request) =>
       ipcRenderer.invoke(LOCAL_PROJECT_CHANNELS.saveSettings, request),
     deleteProject: (request) =>

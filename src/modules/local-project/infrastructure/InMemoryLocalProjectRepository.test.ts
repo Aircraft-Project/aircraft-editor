@@ -2,6 +2,10 @@
 
 import { AutosaveCoordinator } from "../application/AutosaveCoordinator";
 import {
+  createScreenDocuments,
+  projectToEditorState,
+} from "../application/projectMapper";
+import {
   DOCUMENT_VERSION,
   LocalProjectNotFoundError,
   type LayoutDocument,
@@ -58,6 +62,7 @@ describe("InMemory local project repositories", () => {
       screenId: secondScreenId,
       name: "Profile",
       description: "User profile",
+      destination: secondScreenId,
       context: "interface",
       isInitial: true,
       order: 1,
@@ -77,10 +82,11 @@ describe("InMemory local project repositories", () => {
       screenId: secondScreenId,
       graphs: {
         [graphA]: {
+          rootVertexId: "event-click",
           nodes: [
             {
               id: "event-click",
-              kind: "event",
+              kind: "trigger",
               type: "CLICK",
               label: "Click",
               properties: {},
@@ -90,10 +96,11 @@ describe("InMemory local project repositories", () => {
           selectedNodeId: "event-click",
         },
         [graphB]: {
+          rootVertexId: "event-long",
           nodes: [
             {
               id: "event-long",
-              kind: "event",
+              kind: "trigger",
               type: "LONG_PRESS",
               label: "Long press",
               properties: {},
@@ -131,6 +138,99 @@ describe("InMemory local project repositories", () => {
       activeWorkspace: "triggers",
       selectedDevice: "iphone-15-pro-max",
       zoom: 125,
+    });
+  });
+
+  it("preserves destination through save, load, hydrate, save and reload", async () => {
+    const repository = new InMemoryLocalProjectRepository();
+    const project = await createProject(repository, ownerA, "Destination Project");
+    const screen = {
+      ...project.screens[0],
+      destination: "app://home",
+    };
+    await repository.saveScreen(ownerA, project.manifest.projectId, screen);
+
+    const loaded = await repository.load(ownerA, project.manifest.projectId);
+    const hydrated = projectToEditorState(loaded);
+    const documents = createScreenDocuments(
+      hydrated.screens,
+      hydrated.initialScreenId,
+    );
+    await repository.saveScreen(
+      ownerA,
+      project.manifest.projectId,
+      documents[0],
+    );
+
+    await expect(
+      repository.load(ownerA, project.manifest.projectId),
+    ).resolves.toMatchObject({
+      screens: [expect.objectContaining({ destination: "app://home" })],
+    });
+  });
+
+  it("persists catalog items, theme and trigger-node persistence", async () => {
+    const repository = new InMemoryLocalProjectRepository();
+    const project = await createProject(repository, ownerA, "Extended Project");
+    const projectId = project.manifest.projectId;
+    const catalogItem = {
+      documentVersion: DOCUMENT_VERSION,
+      catalogItemId: "movie-card",
+      name: "Movie card",
+      destination: "movie-card",
+      context: "catalog-item" as const,
+      layout: {
+        ...project.layouts[project.screens[0].screenId].tree,
+        properties: { role: "card" },
+      },
+    };
+    const theme = {
+      documentVersion: DOCUMENT_VERSION,
+      projectId,
+      theme: { colors: { primary: "00CFFF" } },
+      componentTheme: {
+        textField: { cursorColor: "$colors.primary" },
+      },
+    };
+    const graph = {
+      documentVersion: DOCUMENT_VERSION,
+      screenId: project.screens[0].screenId,
+      graphs: {
+        binding: {
+          rootVertexId: "trigger-cache",
+          nodes: [{
+            id: "trigger-cache",
+            kind: "trigger" as const,
+            type: "ApiService",
+            label: "Fetch",
+            properties: {},
+            persistence: {
+              localRuntime: true,
+              pilotRuntime: false,
+              globalRuntime: false,
+              extensions: { cacheKey: "movies" },
+            },
+          }],
+          edges: [],
+          selectedNodeId: "trigger-cache",
+        },
+      },
+    };
+
+    await repository.saveCatalogItem(ownerA, projectId, catalogItem);
+    await repository.saveTheme(ownerA, projectId, theme);
+    await repository.saveTriggerGraphs(ownerA, projectId, graph);
+    const loaded = await repository.load(ownerA, projectId);
+
+    expect(loaded.catalogItems).toEqual([catalogItem]);
+    expect(loaded.theme).toEqual(theme);
+    expect(
+      loaded.triggerGraphs[graph.screenId].graphs.binding.nodes[0].persistence,
+    ).toEqual({
+      localRuntime: true,
+      pilotRuntime: false,
+      globalRuntime: false,
+      extensions: { cacheKey: "movies" },
     });
   });
 

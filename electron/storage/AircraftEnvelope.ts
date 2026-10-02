@@ -22,6 +22,8 @@ export const DOCUMENT_TYPES = {
   RESOURCE_MANIFEST: 6,
   SETTINGS: 7,
   RESOURCE_BLOB: 8,
+  CATALOG_ITEM: 9,
+  THEME: 10,
 } as const;
 
 export type AircraftDocumentType =

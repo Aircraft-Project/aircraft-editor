@@ -76,6 +76,8 @@ describe("LocalProjectFileStore", () => {
       ...project.screens[0],
       name: "Home persisted",
       description: "Recovered after restart",
+      mcpMetadata: { source: "assembler" },
+      extensions: { futureScreen: "keep" },
     };
     const layout: LayoutDocument = {
       ...project.layouts[screenId],
@@ -91,23 +93,33 @@ describe("LocalProjectFileStore", () => {
       screenId,
       graphs: {
         [graphA]: {
+          rootVertexId: "event-click",
           nodes: [
             {
               id: "event-click",
-              kind: "event",
+              kind: "trigger",
               type: "CLICK",
               label: "Click",
               properties: {},
+              persistence: {
+                localRuntime: true,
+                pilotRuntime: false,
+                globalRuntime: false,
+                extensions: { cacheKey: "movie-list" },
+              },
             },
           ],
           edges: [],
           selectedNodeId: "event-click",
+          mcpMetadata: { graph: "keep" },
+          extensions: { futureBinding: "keep" },
         },
         [graphB]: {
+          rootVertexId: "event-long",
           nodes: [
             {
               id: "event-long",
-              kind: "event",
+              kind: "trigger",
               type: "LONG_PRESS",
               label: "Long press",
               properties: {},
@@ -121,12 +133,40 @@ describe("LocalProjectFileStore", () => {
     const metadata = {
       ...project.metadata,
       name: "Renamed secret project",
+      extensions: { futureMetadata: "keep" },
+    };
+    const catalogItem = {
+      documentVersion: 1 as const,
+      catalogItemId: "movie-card",
+      name: "movie-card",
+      destination: "movie-card",
+      context: "catalog-item" as const,
+      mcpMetadata: { catalog: "keep" },
+      extensions: { futureCatalog: "keep" },
+      layout: {
+        ...project.layouts[screenId].tree,
+        properties: { surface: "secret-card" },
+      },
+    };
+    const theme = {
+      documentVersion: 1 as const,
+      projectId,
+      theme: { colors: { primary: "00CFFF" } },
+      componentTheme: {
+        textField: { focusedBorderColor: "$colors.primary" },
+      },
     };
 
     await first.store.saveMetadata({ ownerId: ownerA, projectId, document: metadata });
     await first.store.saveScreen({ ownerId: ownerA, projectId, document: renamedScreen });
     await first.store.saveLayout({ ownerId: ownerA, projectId, document: layout });
     await first.store.saveTriggerGraphs({ ownerId: ownerA, projectId, document: graph });
+    await first.store.saveCatalogItem({
+      ownerId: ownerA,
+      projectId,
+      document: catalogItem,
+    });
+    await first.store.saveTheme({ ownerId: ownerA, projectId, document: theme });
     await first.store.saveSettings({
       ownerId: ownerA,
       projectId,
@@ -135,6 +175,7 @@ describe("LocalProjectFileStore", () => {
         activeWorkspace: "triggers",
         selectedDevice: "iphone-15-pro-max",
         zoom: 125,
+        extensions: { futureSettings: "keep" },
       },
     });
 
@@ -170,6 +211,7 @@ describe("LocalProjectFileStore", () => {
         "screens",
         "layouts",
         "triggers",
+        "catalog-items",
         "resources",
         "settings",
       ]),
@@ -185,9 +227,17 @@ describe("LocalProjectFileStore", () => {
     const layoutBytes = await readFile(
       path.join(projectPath, "layouts", screenId + ".airlayout"),
     );
+    const catalogBytes = await readFile(
+      path.join(projectPath, "catalog-items", "movie-card.aircatalog"),
+    );
+    const themeBytes = await readFile(
+      path.join(projectPath, "settings", "theme.airtheme"),
+    );
     expect(metadataBytes.toString("utf8")).not.toContain("Renamed secret project");
     expect(metadataBytes.toString("utf8")).not.toContain(ownerA);
     expect(layoutBytes.toString("utf8")).not.toContain("secret-component-text");
+    expect(catalogBytes.toString("utf8")).not.toContain("movie-card");
+    expect(themeBytes.toString("utf8")).not.toContain("#00cfff");
 
     const fresh = buildStore(rootPath);
     const loaded = (await fresh.store.load(ownerA, projectId)) as unknown as AircraftProject;
@@ -196,6 +246,14 @@ describe("LocalProjectFileStore", () => {
     expect(loaded.layouts[screenId]).toEqual(layout);
     expect(loaded.triggerGraphs[screenId].graphs[graphA]).toEqual(graph.graphs[graphA]);
     expect(loaded.triggerGraphs[screenId].graphs[graphB]).toEqual(graph.graphs[graphB]);
+    expect(loaded.triggerGraphs[screenId].graphs[graphA].nodes[0].persistence).toEqual({
+      localRuntime: true,
+      pilotRuntime: false,
+      globalRuntime: false,
+      extensions: { cacheKey: "movie-list" },
+    });
+    expect(loaded.catalogItems).toEqual([catalogItem]);
+    expect(loaded.theme).toEqual(theme);
     expect(loaded.settings).toMatchObject({
       activeWorkspace: "triggers",
       selectedDevice: "iphone-15-pro-max",
@@ -209,6 +267,32 @@ describe("LocalProjectFileStore", () => {
         resourceId: reference.resourceId,
       }),
     ).toEqual(resourceBytes);
+  });
+
+  it("loads legacy projects without catalog or theme files", async () => {
+    const { store, keys } = buildStore(rootPath);
+    const project = await createProject(store);
+    const projectPath = path.join(
+      rootPath,
+      "users",
+      keys.ownerKey(ownerA),
+      "projects",
+      project.manifest.projectId,
+    );
+    await rm(path.join(projectPath, "catalog-items"), { recursive: true, force: true });
+    await rm(path.join(projectPath, "settings", "theme.airtheme"), { force: true });
+
+    const loaded = (await store.load(
+      ownerA,
+      project.manifest.projectId,
+    )) as unknown as AircraftProject;
+    expect(loaded.catalogItems).toEqual([]);
+    expect(loaded.theme).toEqual({
+      documentVersion: 1,
+      projectId: project.manifest.projectId,
+      theme: {},
+      componentTheme: {},
+    });
   });
 
   it("isolates physical projects by owner hash", async () => {
@@ -331,6 +415,12 @@ describe("LocalProjectFileStore", () => {
       "resources/manifest.airres",
     ],
     ["settings", DOCUMENT_TYPES.SETTINGS, "settings/project.airsettings"],
+    [
+      "catalog item",
+      DOCUMENT_TYPES.CATALOG_ITEM,
+      "catalog-items/catalog-item-version.aircatalog",
+    ],
+    ["theme", DOCUMENT_TYPES.THEME, "settings/theme.airtheme"],
   ] as const)(
     "rejects unsupported documentVersion in %s",
     async (_label, documentType, relativePathTemplate) => {
@@ -338,6 +428,20 @@ describe("LocalProjectFileStore", () => {
       const project = await createProject(store);
       const projectId = project.manifest.projectId;
       const screenId = project.screens[0].screenId;
+      if (documentType === DOCUMENT_TYPES.CATALOG_ITEM) {
+        await store.saveCatalogItem({
+          ownerId: ownerA,
+          projectId,
+          document: {
+            documentVersion: 1,
+            catalogItemId: "catalog-item-version",
+            name: "Versioned item",
+            destination: "catalog-item-version",
+            context: "catalog-item",
+            layout: project.layouts[screenId].tree,
+          },
+        });
+      }
       if (documentType === DOCUMENT_TYPES.TRIGGER_GRAPH) {
         await store.saveTriggerGraphs({
           ownerId: ownerA,

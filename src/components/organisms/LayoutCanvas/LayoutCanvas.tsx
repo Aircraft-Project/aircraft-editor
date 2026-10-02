@@ -99,7 +99,7 @@ function ColumnView({ column, canRemove, callbacks }: ColumnViewProps) {
   const selected = selection?.kind === "column" && selection.id === column.id;
 
   return (
-    <div className={styles.columnSizer} style={{ flexGrow: column.weight }}>
+    <div className={styles.columnSizer}>
       <div
         className={[styles.column, selected ? styles.columnSelected : ""].filter(Boolean).join(" ")}
         onClick={() => onSelectColumn(column.id)}
@@ -162,10 +162,20 @@ function RowView({ row, callbacks }: RowViewProps) {
   const selectedComponentId = selection?.kind === "component" ? selection.id : null;
 
   const sizingClass =
-    row.weight !== undefined ? styles.rowWeighted : row.height === "match_parent" ? styles.rowMatchParent : styles.rowWrap;
+    row.weight !== undefined
+      ? styles.rowWeighted
+      : row.height === "match_parent"
+        ? styles.rowMatchParent
+        : styles.rowWrap;
+  const sizingStyle =
+    row.weight !== undefined
+      ? { flexGrow: row.weight }
+      : typeof row.height === "number"
+        ? { height: row.height, flex: "0 0 auto" }
+        : undefined;
 
   return (
-    <div className={[styles.rowSizer, sizingClass].join(" ")} style={row.weight !== undefined ? { flexGrow: row.weight } : undefined}>
+    <div className={[styles.rowSizer, sizingClass].join(" ")} style={sizingStyle}>
       <div
         className={[styles.row, selected ? styles.rowSelected : "", dragOver ? styles.rowDragOver : ""].filter(Boolean).join(" ")}
         onClick={(event) => {
@@ -173,8 +183,10 @@ function RowView({ row, callbacks }: RowViewProps) {
           onSelectRow(row.id);
         }}
         onDragOver={(event) => {
-          event.preventDefault();
-          setDragOver(true);
+          if (row.content === "empty") {
+            event.preventDefault();
+            setDragOver(true);
+          }
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(event) => {
@@ -186,31 +198,39 @@ function RowView({ row, callbacks }: RowViewProps) {
         }}
       >
         <div className={styles.rowChildren}>
-          {row.children.length === 0 ? (
+          {row.content === "empty" ? (
             <span className={styles.hint}>vacía</span>
-          ) : (
-            row.children.map((child) =>
-              child.kind === "component" ? (
-                <div
-                  key={child.id}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onSelectComponent(child.id);
-                  }}
-                >
-                  <ASTNodeCard type={child.type} name={child.name} selected={selectedComponentId === child.id} />
-                </div>
-              ) : (
-                <ColumnView key={child.id} column={child} canRemove callbacks={callbacks} />
-              )
-            )
-          )}
+          ) : null}
+          {row.content === "component" ? (
+            <div
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelectComponent(row.component.id);
+              }}
+            >
+              <ASTNodeCard
+                type={row.component.type}
+                name={row.component.name}
+                selected={selectedComponentId === row.component.id}
+              />
+            </div>
+          ) : null}
+          {row.content === "columns"
+            ? row.columns.map((column) => (
+                <ColumnView
+                  key={column.id}
+                  column={column}
+                  canRemove
+                  callbacks={callbacks}
+                />
+              ))
+            : null}
         </div>
-
         <button
           type="button"
           className={styles.addColumnButton}
           title="Dividir esta row en columns"
+          disabled={row.content === "component"}
           onClick={(event) => {
             event.stopPropagation();
             onAddColumnToRow(row.id);

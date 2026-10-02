@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { SchemaValue } from "@/modules/aircraft-schema";
 import type { EditorWorkspace } from "@/modules/editor";
 import { useTriggerGraphStore } from "@/modules/editor/application/useTriggerGraphStore";
 import { getSession } from "@/modules/session";
@@ -13,6 +14,7 @@ import {
 import { getLocalProjectRepository } from "../composition";
 import { AutosaveCoordinator, type SaveState } from "./AutosaveCoordinator";
 import {
+  createCatalogItemDocument,
   createLayoutDocument,
   createScreenDocuments,
   createTriggerGraphDocument,
@@ -60,6 +62,11 @@ export function useLocalProjectPersistence({
   const hydratingRef = useRef(source === "LOCAL");
   const ownerIdRef = useRef<string | null>(null);
   const persistedSettingsRef = useRef<string | null>(null);
+  const documentExtensionsRef = useRef<{
+    layouts: Readonly<Record<string, Readonly<Record<string, SchemaValue>> | undefined>>;
+    triggerGraphs: Readonly<Record<string, Readonly<Record<string, SchemaValue>> | undefined>>;
+    settings?: Readonly<Record<string, SchemaValue>>;
+  }>({ layouts: {}, triggerGraphs: {} });
   const activeScreenId = useEditorStore((state) => state.activeScreenId);
   const hydrationKey = source + ":" + (projectId ?? "");
   const localProjectRequested = source === "LOCAL" && Boolean(projectId);
@@ -78,6 +85,7 @@ export function useLocalProjectPersistence({
       hydratingRef.current = false;
       ownerIdRef.current = null;
       persistedSettingsRef.current = null;
+      documentExtensionsRef.current = { layouts: {}, triggerGraphs: {} };
       return;
     }
     const session = getSession();
@@ -115,6 +123,7 @@ export function useLocalProjectPersistence({
         useEditorStore.getState().hydrateEditor(hydrated);
         useTriggerGraphStore.getState().hydrateGraphs(hydrated.graphs);
         persistedSettingsRef.current = settingsSignature(project.settings);
+        documentExtensionsRef.current = hydrated.documentExtensions;
         setWorkspace(project.settings.activeWorkspace);
         setDevicePresetId(project.settings.selectedDevice);
         setZoom(project.settings.zoom);
@@ -144,6 +153,7 @@ export function useLocalProjectPersistence({
       }
       ownerIdRef.current = null;
       persistedSettingsRef.current = null;
+      documentExtensionsRef.current = { layouts: {}, triggerGraphs: {} };
     };
   }, [
     debounceMs,
@@ -172,6 +182,9 @@ export function useLocalProjectPersistence({
 
     let previousScreenIds = new Set(
       useEditorStore.getState().screens.map((screen) => screen.id),
+    );
+    let previousCatalogItemIds = new Set(
+      useEditorStore.getState().catalogItems.map((item) => item.id),
     );
     const unsubscribeEditor = useEditorStore.subscribe((state, previous) => {
       if (hydratingRef.current) return;
@@ -202,10 +215,37 @@ export function useLocalProjectPersistence({
         previousScreenIds = currentIds;
       }
 
+      if (state.catalogItems !== previous.catalogItems) {
+        const currentIds = new Set(state.catalogItems.map((item) => item.id));
+        for (const item of state.catalogItems) {
+          const previousItem = previous.catalogItems.find(
+            (candidate) => candidate.id === item.id,
+          );
+          if (item !== previousItem) {
+            const document = createCatalogItemDocument(item);
+            coordinator.schedule("catalog-item:" + item.id, () =>
+              repository.saveCatalogItem(ownerId, projectId, document),
+            );
+          }
+        }
+        for (const removedId of previousCatalogItemIds) {
+          if (!currentIds.has(removedId)) {
+            coordinator.schedule("catalog-item:" + removedId, () =>
+              repository.deleteCatalogItem(ownerId, projectId, removedId),
+            );
+          }
+        }
+        previousCatalogItemIds = currentIds;
+      }
+
       if (state.screenTrees !== previous.screenTrees) {
         for (const [screenId, tree] of Object.entries(state.screenTrees)) {
           if (tree !== previous.screenTrees[screenId]) {
-            const document = createLayoutDocument(screenId, tree);
+            const document = createLayoutDocument(
+              screenId,
+              tree,
+              documentExtensionsRef.current.layouts[screenId],
+            );
             coordinator.schedule("layout:" + screenId, () =>
               repository.saveLayout(ownerId, projectId, document),
             );
@@ -223,7 +263,11 @@ export function useLocalProjectPersistence({
           useEditorStore.getState().screens.map((screen) => screen.id),
         );
         for (const screenId of screenIds) {
-          const document = createTriggerGraphDocument(screenId, state.graphs);
+          const document = createTriggerGraphDocument(
+            screenId,
+            state.graphs,
+            documentExtensionsRef.current.triggerGraphs[screenId],
+          );
           coordinator.schedule("graphs:" + screenId, () =>
             repository.saveTriggerGraphs(ownerId, projectId, document),
           );
@@ -255,6 +299,7 @@ export function useLocalProjectPersistence({
       activeWorkspace: workspace,
       selectedDevice: devicePresetId,
       zoom,
+      extensions: documentExtensionsRef.current.settings,
     };
     const signature = settingsSignature(document);
     if (persistedSettingsRef.current === signature) return;

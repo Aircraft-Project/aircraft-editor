@@ -9,6 +9,7 @@ import { KeyManager } from "../../../../electron/storage/KeyManager";
 import { LocalProjectFileStore } from "../../../../electron/storage/LocalProjectFileStore";
 import type {
   AircraftProject,
+  CatalogItemDocument,
   CreateLocalProjectInput,
   LayoutDocument,
   LocalProjectSummary,
@@ -19,6 +20,7 @@ import type {
   ResourceReference,
   ScreenDocument,
   TriggerGraphDocument,
+  ThemeDocument,
 } from "../domain";
 import { InternalProjectProvisioner } from "./InternalProjectProvisioner";
 import type {
@@ -80,6 +82,18 @@ function repositoryAdapters(store: LocalProjectFileStore): {
       projectId: string,
       document: TriggerGraphDocument,
     ) => store.saveTriggerGraphs({ ownerId: owner, projectId, document }),
+    saveCatalogItem: async (
+      owner: string,
+      projectId: string,
+      document: CatalogItemDocument,
+    ) => store.saveCatalogItem({ ownerId: owner, projectId, document }),
+    deleteCatalogItem: async (owner, projectId, catalogItemId) =>
+      store.deleteCatalogItem({ ownerId: owner, projectId, catalogItemId }),
+    saveTheme: async (
+      owner: string,
+      projectId: string,
+      document: ThemeDocument,
+    ) => store.saveTheme({ ownerId: owner, projectId, document }),
     saveSettings: async (
       owner: string,
       projectId: string,
@@ -152,21 +166,40 @@ describe("InternalProjectProvisioner", () => {
           layout: {
             id: "body-seeded",
             kind: "body",
+            properties: {},
             columns: [
               {
                 id: "column-seeded",
                 kind: "column",
-                weight: 1,
-                rows: [],
+                properties: {},
+                rows: [
+                  {
+                    id: "row-seeded",
+                    kind: "row",
+                    content: "component",
+                    height: "wrap_content",
+                    properties: {},
+                    component: {
+                      id: "button-main",
+                      kind: "component",
+                      type: "Button",
+                      subtype: "Primary",
+                      name: "Main button",
+                      properties: {},
+                      observers: [],
+                    },
+                  },
+                ],
               },
             ],
           },
           graphs: {
             [bindingKey]: {
+              rootVertexId: "event-on-click",
               nodes: [
                 {
                   id: "event-on-click",
-                  kind: "event",
+                  kind: "trigger",
                   type: "on-clic-event",
                   label: "On click",
                   properties: {},
@@ -191,6 +224,26 @@ describe("InternalProjectProvisioner", () => {
           },
         },
       ],
+      catalogItems: [
+        {
+          catalogItemId: "movie-card",
+          name: "movie-card",
+          destination: "movie-card",
+          context: "catalog-item",
+          layout: {
+            id: "catalog-body",
+            kind: "body",
+            properties: { density: "compact" },
+            columns: [],
+          },
+        },
+      ],
+      theme: {
+        theme: { colors: { primary: "00CFFF" } },
+        componentTheme: {
+          textLabel: { textColorDefault: "$colors.onBackground" },
+        },
+      },
       settings: {
         activeScreenId: screenId,
         activeWorkspace: "triggers",
@@ -222,6 +275,7 @@ describe("InternalProjectProvisioner", () => {
         "screens",
         "layouts",
         "triggers",
+        "catalog-items",
         "resources",
         "settings",
       ]),
@@ -253,6 +307,15 @@ describe("InternalProjectProvisioner", () => {
         expect.objectContaining({ type: "Navigation" }),
       ],
     });
+    expect(loaded.catalogItems).toEqual([
+      expect.objectContaining({ catalogItemId: "movie-card" }),
+    ]);
+    expect(loaded.theme).toMatchObject({
+      theme: { colors: { primary: "00CFFF" } },
+      componentTheme: {
+        textLabel: { textColorDefault: "$colors.onBackground" },
+      },
+    });
     expect(loaded.settings).toMatchObject({
       activeScreenId: screenId,
       activeWorkspace: "triggers",
@@ -266,5 +329,161 @@ describe("InternalProjectProvisioner", () => {
         resourceId: provisioned.resources[0].resourceId,
       }),
     ).toEqual(bytes);
+  });
+  it("validates catalog IDs without sharing interface destinations", async () => {
+    const first = buildFileStore(rootPath);
+    const repositories = repositoryAdapters(first.store);
+    const provisioner = new InternalProjectProvisioner(
+      repositories.projects,
+      repositories.resources,
+    );
+    const project = {
+      ownerId,
+      name: "Destination parity seed",
+      schemaVersion: "snapshot-1",
+    };
+    const catalogItem = {
+      catalogItemId: "catalog-card",
+      name: "catalog-card",
+      destination: "catalog-card",
+      context: "catalog-item" as const,
+      layout: {
+        id: "catalog-body",
+        kind: "body" as const,
+        properties: {},
+        columns: [],
+      },
+    };
+
+    await expect(
+      provisioner.provision({
+        project,
+        catalogItems: [
+          catalogItem,
+          { ...catalogItem, destination: "catalog-card-secondary" },
+        ],
+      }),
+    ).rejects.toThrow("duplicate catalog item IDs");
+
+    await expect(
+      provisioner.provision({
+        project,
+        screens: [
+          {
+            screenId: "screen-home",
+            name: "Home",
+            description: "Home screen",
+            destination: "shared-destination",
+            context: "interface",
+            isInitial: true,
+            order: 0,
+            layout: {
+              id: "screen-body",
+              kind: "body",
+              properties: {},
+              columns: [],
+            },
+          },
+        ],
+        catalogItems: [
+          { ...catalogItem, destination: "shared-destination" },
+        ],
+      }),
+    ).resolves.toBeDefined();
+  });
+
+  it("validates catalog-only seeds before creating physical projects", async () => {
+    const first = buildFileStore(rootPath);
+    const repositories = repositoryAdapters(first.store);
+    const createProject = jest.spyOn(repositories.projects, "create");
+    const provisioner = new InternalProjectProvisioner(
+      repositories.projects,
+      repositories.resources,
+    );
+    const project = {
+      ownerId,
+      name: "Catalog-only invalid seed",
+      schemaVersion: "snapshot-1",
+    };
+    const catalogItem = {
+      catalogItemId: "catalog-card",
+      name: "catalog-card",
+      destination: "catalog-card",
+      context: "catalog-item" as const,
+      layout: {
+        id: "catalog-body",
+        kind: "body" as const,
+        properties: {},
+        columns: [
+          {
+            id: "catalog-column",
+            kind: "column" as const,
+            properties: {},
+            rows: [],
+          },
+        ],
+      },
+    };
+
+    await expect(
+      provisioner.provision({
+        project,
+        catalogItems: [{ ...catalogItem, name: "Catalog card" }],
+      }),
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({ code: "CATALOG_ITEM_IDENTITY_MISMATCH" }),
+      ]),
+    });
+
+    const invalidRow = {
+      id: "catalog-row",
+      kind: "row" as const,
+      content: "component" as const,
+      height: "wrap_content",
+      properties: {},
+      component: {
+        id: "catalog-component",
+        kind: "component" as const,
+        type: "Button",
+        subtype: "default",
+        name: "Button",
+        properties: {},
+        observers: [],
+      },
+      columns: [
+        {
+          id: "nested-column",
+          kind: "column" as const,
+          properties: {},
+          rows: [],
+        },
+      ],
+    };
+    await expect(
+      provisioner.provision({
+        project,
+        catalogItems: [
+          {
+            ...catalogItem,
+            layout: {
+              ...catalogItem.layout,
+              columns: [
+                {
+                  ...catalogItem.layout.columns[0],
+                  rows: [invalidRow as never],
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({ code: "H-3" }),
+      ]),
+    });
+
+    expect(createProject).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 import type {
   AircraftProject,
+  CatalogItemDocument,
   CreateLocalProjectInput,
   LayoutDocument,
   LocalProjectSummary,
@@ -10,6 +11,7 @@ import type {
   ResourceReference,
   ScreenDocument,
   TriggerGraphDocument,
+  ThemeDocument,
 } from "../domain";
 
 export interface LocalProjectRepository {
@@ -40,6 +42,21 @@ export interface LocalProjectRepository {
     ownerId: string,
     projectId: string,
     document: TriggerGraphDocument,
+  ): Promise<void>;
+  saveCatalogItem(
+    ownerId: string,
+    projectId: string,
+    document: CatalogItemDocument,
+  ): Promise<void>;
+  deleteCatalogItem(
+    ownerId: string,
+    projectId: string,
+    catalogItemId: string,
+  ): Promise<void>;
+  saveTheme(
+    ownerId: string,
+    projectId: string,
+    document: ThemeDocument,
   ): Promise<void>;
   saveSettings(
     ownerId: string,

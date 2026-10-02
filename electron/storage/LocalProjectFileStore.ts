@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   mkdir,
   readdir,
@@ -124,7 +124,7 @@ export class LocalProjectFileStore {
     if (!name) throw new Error("Project name is required.");
 
     const projectId = randomUUID();
-    const screenId = randomUUID();
+    const screenId = randomBytes(8).toString("hex");
     const now = new Date().toISOString();
     const project = {
       manifest: {
@@ -156,6 +156,7 @@ export class LocalProjectFileStore {
           screenId,
           name: "Home",
           description: "Pantalla principal",
+          destination: screenId,
           context: "interface",
           isInitial: true,
           order: 0,
@@ -166,13 +167,14 @@ export class LocalProjectFileStore {
           documentVersion: DOCUMENT_VERSION,
           screenId,
           tree: {
-            id: randomUUID(),
+            id: randomBytes(8).toString("hex"),
             kind: "body",
+            properties: {},
             columns: [
               {
-                id: randomUUID(),
+                id: randomBytes(8).toString("hex"),
                 kind: "column",
-                weight: 1,
+                properties: {},
                 rows: [],
               },
             ],
@@ -180,10 +182,17 @@ export class LocalProjectFileStore {
         },
       },
       triggerGraphs: {},
+      catalogItems: [],
       resources: {
         documentVersion: DOCUMENT_VERSION,
         projectId,
         resources: [],
+      },
+      theme: {
+        documentVersion: DOCUMENT_VERSION,
+        projectId,
+        theme: {},
+        componentTheme: {},
       },
       settings: {
         documentVersion: DOCUMENT_VERSION,
@@ -199,7 +208,7 @@ export class LocalProjectFileStore {
     await mkdir(path.dirname(projectPath), { recursive: true });
     await mkdir(projectPath, { recursive: false });
     await Promise.all(
-      ["metadata", "screens", "layouts", "triggers", "resources", "settings"].map(
+      ["metadata", "screens", "layouts", "triggers", "catalog-items", "resources", "settings"].map(
         (directory) =>
           mkdir(path.join(projectPath, directory), { recursive: false }),
       ),
@@ -235,6 +244,12 @@ export class LocalProjectFileStore {
         DOCUMENT_TYPES.RESOURCE_MANIFEST,
         key,
         project.resources,
+      );
+      await this.writeStructured(
+        path.join(projectPath, "settings", "theme.airtheme"),
+        DOCUMENT_TYPES.THEME,
+        key,
+        project.theme,
       );
       await this.writeStructured(
         path.join(projectPath, "settings", "project.airsettings"),
@@ -284,6 +299,12 @@ export class LocalProjectFileStore {
       DOCUMENT_TYPES.TRIGGER_GRAPH,
       key,
     );
+    const catalogItems = await this.readDirectoryDocuments(
+      path.join(projectPath, "catalog-items"),
+      ".aircatalog",
+      DOCUMENT_TYPES.CATALOG_ITEM,
+      key,
+    );
     const resources = await this.readStructured(
       path.join(projectPath, "resources", "manifest.airres"),
       DOCUMENT_TYPES.RESOURCE_MANIFEST,
@@ -294,14 +315,27 @@ export class LocalProjectFileStore {
       DOCUMENT_TYPES.SETTINGS,
       key,
     );
+    const theme = await this.readOptionalStructured(
+      path.join(projectPath, "settings", "theme.airtheme"),
+      DOCUMENT_TYPES.THEME,
+      key,
+      {
+        documentVersion: DOCUMENT_VERSION,
+        projectId,
+        theme: {},
+        componentTheme: {},
+      },
+    );
     return {
       manifest,
       metadata,
       screens,
       layouts: indexBy(layoutDocuments, "screenId"),
       triggerGraphs: indexBy(graphDocuments, "screenId"),
+      catalogItems,
       resources,
       settings,
+      theme,
     };
   }
 
@@ -367,6 +401,45 @@ export class LocalProjectFileStore {
         "triggers/" +
         this.requireSafeId(document.screenId, "screenId") +
         ".airgraph",
+    );
+  }
+
+  async saveCatalogItem(request: unknown): Promise<void> {
+    await this.saveDocumentRequest(
+      request,
+      "catalogItemId",
+      DOCUMENT_TYPES.CATALOG_ITEM,
+      (document) =>
+        "catalog-items/" +
+        this.requireSafeId(document.catalogItemId, "catalogItemId") +
+        ".aircatalog",
+    );
+  }
+
+  async deleteCatalogItem(request: unknown): Promise<void> {
+    const data = this.ownerProjectRequest(request);
+    const catalogItemId = this.requireSafeId(
+      data.catalogItemId,
+      "catalogItemId",
+    );
+    await this.enqueue(data.ownerId, data.projectId, async () => {
+      await unlink(
+        path.join(
+          this.projectPath(data.ownerId, data.projectId),
+          "catalog-items",
+          catalogItemId + ".aircatalog",
+        ),
+      ).catch(ignoreMissing);
+      await this.touch(data.ownerId, data.projectId);
+    });
+  }
+
+  async saveTheme(request: unknown): Promise<void> {
+    await this.saveDocumentRequest(
+      request,
+      "projectId",
+      DOCUMENT_TYPES.THEME,
+      () => "settings/theme.airtheme",
     );
   }
 
@@ -690,6 +763,22 @@ export class LocalProjectFileStore {
       throw new UnsupportedDocumentVersionError(document.documentVersion);
     }
     return document;
+  }
+
+  private async readOptionalStructured(
+    filePath: string,
+    type: AircraftDocumentType,
+    key: Uint8Array,
+    fallback: unknown,
+  ): Promise<unknown> {
+    try {
+      return await this.readStructured(filePath, type, key);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return fallback;
+      }
+      throw error;
+    }
   }
 
   private async readDirectoryDocuments(

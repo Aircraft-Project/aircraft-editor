@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   defaultDevicePresetId,
 } from "@/components/organisms/LayoutCanvas/devicePresets";
@@ -52,7 +52,17 @@ export function EditorView({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [saveAnnouncement, setSaveAnnouncement] = useState("");
   const previewButtonRef = useRef<HTMLButtonElement>(null);
-  const { activeScreenId, screens, screenTrees } = useEditorStore();
+  const {
+    activeScreenId,
+    screens,
+    screenTrees,
+    catalogItems,
+    activeCatalogItemId,
+  } = useEditorStore();
+  const [catalogTriggerRules, setCatalogTriggerRules] = useState<{
+    readonly key: string;
+    readonly supportsTriggers: boolean;
+  } | null>(null);
 
   const {
     saveState,
@@ -78,6 +88,44 @@ export function EditorView({
   const activeBody = activeScreen
     ? screenTrees[activeScreen.id]
     : undefined;
+
+  const activeCatalogItem = catalogItems.find(
+    (item) => item.id === activeCatalogItemId,
+  );
+  const activeCatalogContext = activeCatalogItem?.context ?? null;
+  const catalogRulesKey = activeCatalogItem
+    ? activeCatalogItem.id + "\0" + activeCatalogContext
+    : null;
+  const catalogSupportsTriggers =
+    catalogRulesKey && catalogTriggerRules?.key === catalogRulesKey
+      ? catalogTriggerRules.supportsTriggers
+      : null;
+
+  useEffect(() => {
+    if (!activeCatalogContext || !catalogRulesKey) return;
+    let current = true;
+    schemaProvider
+      .getContextRules(activeCatalogContext)
+      .then((rules) => {
+        if (current) {
+          setCatalogTriggerRules({
+            key: catalogRulesKey,
+            supportsTriggers: rules.supportsTriggers,
+          });
+        }
+      })
+      .catch(() => {
+        if (current) {
+          setCatalogTriggerRules({
+            key: catalogRulesKey,
+            supportsTriggers: false,
+          });
+        }
+      });
+    return () => {
+      current = false;
+    };
+  }, [activeCatalogContext, catalogRulesKey, schemaProvider]);
 
   const returnPreviewFocus = useCallback(() => {
     previewButtonRef.current?.focus();
@@ -132,6 +180,11 @@ export function EditorView({
         <EditorNavigation
           activeWorkspace={workspace}
           onChange={setWorkspace}
+          disabledWorkspaces={
+            activeCatalogItemId && catalogSupportsTriggers !== true
+              ? ["triggers"]
+              : []
+          }
         />
         <section
           className={styles.workspace}

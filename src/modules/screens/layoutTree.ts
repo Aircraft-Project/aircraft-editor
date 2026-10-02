@@ -1,94 +1,137 @@
 import { ComponentType } from "@/design/tokens";
 import type { SchemaValue } from "@/modules/aircraft-schema";
 
-/**
- * Modelo de AST simplificado (Body → Column → Row → (Component | Column)), PRD §4.1.
- * Una Row puede dividirse en Columns hijas (para subdividir el ancho de esa
- * Row), que a su vez vuelven a tener Rows — el árbol es recursivo sin límite
- * de profundidad, igual que en el diagrama de referencia del usuario:
- * Column → Row[] → (Component | Column[] → Row[] → Component).
- *
- * Reglas de tamaño (dadas por el usuario, no están en el PRD):
- *
- *  - Column expone el ancho. Toda Column tiene un `weight` (default 1).
- *    El ancho de cada Column se calcula con:
- *      Anchura% = (weight * 100) / suma(weight de todas las columns hermanas)
- *    "Hermanas" son las demás columns en la misma lista: las del Body, o las
- *    demás Column-hijas dentro de la misma Row si la Row fue subdividida.
- *    Se mapea 1:1 a flexbox: `flex-grow: weight` con `flex-basis: 0%` sobre
- *    todas las columns de esa lista — flexbox ya reparte el 100% del ancho
- *    proporcionalmente a los grow factors, sin cálculo manual de %.
- *
- *  - Row expone el alto. Row tiene `height` (wrap_content por default) y un
- *    `weight` opcional.
- *      - Sin weight: se respeta `height` tal cual (wrap_content = tamaño
- *        natural del contenido; match_parent = ocupa el espacio vertical
- *        sobrante de la Column, sin competir por proporción con nadie más).
- *      - Con weight: `height` se ignora por completo (weight siempre gana,
- *        sin importar qué diga height) y la Row compite por el espacio
- *        vertical sobrante de la Column de forma ponderada frente a sus
- *        rows hermanas con weight, con la misma fórmula que Column:
- *          Altura% = (weight * 100) / suma(weight de todas las rows con weight)
- *        Las rows sin weight se miden primero por su tamaño natural/último
- *        disponible, y lo que sobra es el 100% que se reparte entre las
- *        rows con weight. Esto es exactamente el algoritmo estándar de
- *        flexbox: items con `flex-grow: 0` toman su tamaño primero, y el
- *        espacio libre restante se reparte entre los items con
- *        `flex-grow: weight` en esa proporción.
- *
- *  - Los hijos de una Row (`RowNode.children`) son una lista mixta de
- *    Component y Column. Los Components sueltos ocupan su tamaño natural
- *    (no participan de ningún weight); las Columns hijas de esa Row dividen
- *    entre sí el ancho *sobrante* de la Row con la misma fórmula de Column,
- *    igual que las rows wrap_content vs con weight en el eje vertical.
- */
+export type RowHeight = "wrap_content" | "match_parent" | number;
+export type McpMetadata = Readonly<Record<string, string>>;
+export type NodeExtensions = Readonly<Record<string, SchemaValue>>;
 
-export type RowHeight = "wrap_content" | "match_parent";
+export type HorizontalArrangement =
+  | "Start"
+  | "End"
+  | "Center"
+  | "SpaceBetween"
+  | "SpaceAround"
+  | "SpaceEvenly";
+
+export type VerticalAlignment = "Top" | "Bottom" | "CenterVertically";
+
+export type BodyProperties = Readonly<Record<string, SchemaValue>> & {
+  readonly cardPadding?: number;
+  readonly cardBackgroundColor?: string;
+  readonly viewType?: string;
+  readonly identifier?: string | null;
+};
+
+export type ColumnProperties = Readonly<Record<string, SchemaValue>> & {
+  readonly padding?: number;
+  readonly scrollable?: boolean;
+};
+
+export type RowProperties = Readonly<Record<string, SchemaValue>> & {
+  readonly padding?: number;
+  readonly horizontalArrangement?: HorizontalArrangement;
+  readonly verticalAlignment?: VerticalAlignment;
+};
+
+export type ObserverReference = {
+  readonly observerIdentifier: string;
+};
 
 export type ComponentNode = {
-  id: string;
-  kind: "component";
-  type: ComponentType;
-  subtype: string;
-  name: string;
-  properties: Record<string, SchemaValue>;
+  readonly id: string;
+  readonly kind: "component";
+  readonly type: ComponentType;
+  readonly subtype: string;
+  readonly name: string;
+  readonly properties: Record<string, SchemaValue>;
+  readonly observers: readonly ObserverReference[];
+  readonly mcpMetadata?: McpMetadata;
+  readonly extensions?: NodeExtensions;
 };
 
-/** Hijo de una Row: un Component hoja, o una Column que subdivide la Row. */
-export type RowChild = ComponentNode | ColumnNode;
-
-export type RowNode = {
-  id: string;
-  kind: "row";
-  height: RowHeight;
-  /** Si está definido, `height` se ignora por completo (ver Casuística 2). */
-  weight?: number;
-  children: RowChild[];
+type RowNodeBase = {
+  readonly id: string;
+  readonly kind: "row";
+  readonly height?: RowHeight;
+  readonly weight?: number;
+  readonly properties: RowProperties;
+  readonly mcpMetadata?: McpMetadata;
+  readonly extensions?: NodeExtensions;
 };
+
+export type EmptyRowNode = RowNodeBase & {
+  readonly content: "empty";
+};
+
+export type ComponentRowNode = RowNodeBase & {
+  readonly content: "component";
+  readonly component: ComponentNode;
+};
+
+export type ColumnsRowNode = RowNodeBase & {
+  readonly content: "columns";
+  readonly columns: readonly [ColumnNode, ...ColumnNode[]];
+};
+
+/** Aircraft H-3 is encoded in the type: a row is empty, component, or columns. */
+export type RowNode = EmptyRowNode | ComponentRowNode | ColumnsRowNode;
 
 export type ColumnNode = {
-  id: string;
-  kind: "column";
-  weight: number;
+  readonly id: string;
+  readonly kind: "column";
+  readonly properties: ColumnProperties;
   rows: RowNode[];
+  readonly mcpMetadata?: McpMetadata;
+  readonly extensions?: NodeExtensions;
+  /** Editor-only compatibility data. It has no Assembler/runtime semantics. */
+  readonly editorMetadata?: {
+    readonly legacyWeight?: number;
+  };
 };
 
 export type BodyNode = {
-  id: string;
-  kind: "body";
+  readonly id: string;
+  readonly kind: "body";
+  readonly properties: BodyProperties;
   columns: ColumnNode[];
+  readonly mcpMetadata?: McpMetadata;
+  readonly extensions?: NodeExtensions;
 };
 
 export type DroppedPaletteItem = {
-  type: ComponentType;
-  subtype: string;
-  initialProperties?: Record<string, SchemaValue>;
+  readonly type: ComponentType;
+  readonly subtype: string;
+  readonly initialProperties?: Record<string, SchemaValue>;
 };
 
-let idCounter = 0;
-export function nextId(prefix: string): string {
-  idCounter += 1;
-  return `${prefix}-${idCounter}`;
+const AIRCRAFT_IDENTIFIER_PATTERN = /^[0-9a-f]{16}$/;
+
+export function isAircraftIdentifier(value: string): boolean {
+  return AIRCRAFT_IDENTIFIER_PATTERN.test(value);
+}
+
+export function createAircraftIdentifier(
+  usedIdentifiers: ReadonlySet<string> = new Set(),
+): string {
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi?.getRandomValues) {
+    throw new Error("Web Crypto is required to generate Aircraft identifiers.");
+  }
+  let identifier: string;
+  do {
+    const bytes = new Uint8Array(8);
+    cryptoApi.getRandomValues(bytes);
+    identifier = Array.from(bytes, (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+  } while (usedIdentifiers.has(identifier));
+  return identifier;
+}
+
+function takeIdentifier(usedIdentifiers: Set<string>): string {
+  const identifier = createAircraftIdentifier(usedIdentifiers);
+  usedIdentifiers.add(identifier);
+  return identifier;
 }
 
 export function createComponentNode(
@@ -96,84 +139,127 @@ export function createComponentNode(
   subtype: string,
   displayIndex: number,
   initialProperties: Record<string, SchemaValue> = {},
+  usedIdentifiers: Set<string> = new Set(),
 ): ComponentNode {
   return {
-    id: nextId("component"),
+    id: takeIdentifier(usedIdentifiers),
     kind: "component",
     type,
     subtype,
     name: `${type} ${displayIndex}`,
     properties: initialProperties,
+    observers: [],
   };
 }
 
-export function createRowNode(children: RowChild[]): RowNode {
-  return { id: nextId("row"), kind: "row", height: "wrap_content", children };
-}
-
-export function createColumnNode(): ColumnNode {
-  return { id: nextId("column"), kind: "column", weight: 1, rows: [] };
-}
-
-export function createEmptyBody(): BodyNode {
+function rowBase(id: string): RowNodeBase {
   return {
-    id: nextId("body"),
-    kind: "body",
-    columns: [createColumnNode()],
+    id,
+    kind: "row",
+    height: "wrap_content",
+    properties: {},
   };
 }
 
-// ---------------------------------------------------------------------------
-// Lecturas recursivas (buscan en toda la profundidad del árbol)
-// ---------------------------------------------------------------------------
+export function createEmptyRowNode(
+  usedIdentifiers: Set<string> = new Set(),
+): EmptyRowNode {
+  return { ...rowBase(takeIdentifier(usedIdentifiers)), content: "empty" };
+}
 
-export function countComponentsOfType(body: BodyNode, type: ComponentType): number {
-  let count = 0;
+export function createComponentRowNode(
+  component: ComponentNode,
+  usedIdentifiers: Set<string> = new Set(),
+): ComponentRowNode {
+  return {
+    ...rowBase(takeIdentifier(usedIdentifiers)),
+    content: "component",
+    component,
+  };
+}
+
+export function createColumnsRowNode(
+  columns: readonly [ColumnNode, ...ColumnNode[]],
+  usedIdentifiers: Set<string> = new Set(),
+): ColumnsRowNode {
+  return {
+    ...rowBase(takeIdentifier(usedIdentifiers)),
+    content: "columns",
+    columns,
+  };
+}
+
+export function createColumnNode(
+  usedIdentifiers: Set<string> = new Set(),
+): ColumnNode {
+  return {
+    id: takeIdentifier(usedIdentifiers),
+    kind: "column",
+    properties: {},
+    rows: [],
+  };
+}
+
+export function createEmptyBody(
+  existingIdentifiers: ReadonlySet<string> = new Set(),
+): BodyNode {
+  const usedIdentifiers = new Set(existingIdentifiers);
+  const bodyId = takeIdentifier(usedIdentifiers);
+  return {
+    id: bodyId,
+    kind: "body",
+    properties: {},
+    columns: [createColumnNode(usedIdentifiers)],
+  };
+}
+
+export function getRowColumns(row: RowNode): readonly ColumnNode[] {
+  return row.content === "columns" ? row.columns : [];
+}
+
+export function getRowComponent(row: RowNode): ComponentNode | undefined {
+  return row.content === "component" ? row.component : undefined;
+}
+
+export function collectLayoutIdentifiers(body: BodyNode): Set<string> {
+  const identifiers = new Set<string>([body.id]);
   const visitColumn = (column: ColumnNode) => {
+    identifiers.add(column.id);
     for (const row of column.rows) {
-      for (const child of row.children) {
-        if (child.kind === "component") {
-          if (child.type === type) count += 1;
-        } else {
-          visitColumn(child);
-        }
+      identifiers.add(row.id);
+      if (row.content === "component") {
+        identifiers.add(row.component.id);
+      } else if (row.content === "columns") {
+        row.columns.forEach(visitColumn);
       }
     }
   };
   body.columns.forEach(visitColumn);
-  return count;
+  return identifiers;
 }
 
-export function findComponent(body: BodyNode, componentId: string): ComponentNode | undefined {
-  const searchColumn = (column: ColumnNode): ComponentNode | undefined => {
-    for (const row of column.rows) {
-      for (const child of row.children) {
-        if (child.kind === "component") {
-          if (child.id === componentId) return child;
-        } else {
-          const found = searchColumn(child);
-          if (found) return found;
-        }
-      }
-    }
-    return undefined;
-  };
-  for (const column of body.columns) {
-    const found = searchColumn(column);
-    if (found) return found;
-  }
-  return undefined;
+export function countComponentsOfType(
+  body: BodyNode,
+  type: ComponentType,
+): number {
+  return listComponents(body).filter((component) => component.type === type)
+    .length;
+}
+
+export function findComponent(
+  body: BodyNode,
+  componentId: string,
+): ComponentNode | undefined {
+  return listComponents(body).find((component) => component.id === componentId);
 }
 
 export function findRow(body: BodyNode, rowId: string): RowNode | undefined {
   const searchColumn = (column: ColumnNode): RowNode | undefined => {
     for (const row of column.rows) {
       if (row.id === rowId) return row;
-      for (const child of row.children) {
-        if (child.kind === "column") {
-          const found = searchColumn(child);
-          if (found) return found;
-        }
+      for (const child of getRowColumns(row)) {
+        const found = searchColumn(child);
+        if (found) return found;
       }
     }
     return undefined;
@@ -185,15 +271,16 @@ export function findRow(body: BodyNode, rowId: string): RowNode | undefined {
   return undefined;
 }
 
-export function findColumn(body: BodyNode, columnId: string): ColumnNode | undefined {
+export function findColumn(
+  body: BodyNode,
+  columnId: string,
+): ColumnNode | undefined {
   const searchColumn = (column: ColumnNode): ColumnNode | undefined => {
     if (column.id === columnId) return column;
     for (const row of column.rows) {
-      for (const child of row.children) {
-        if (child.kind === "column") {
-          const found = searchColumn(child);
-          if (found) return found;
-        }
+      for (const child of getRowColumns(row)) {
+        const found = searchColumn(child);
+        if (found) return found;
       }
     }
     return undefined;
@@ -205,128 +292,223 @@ export function findColumn(body: BodyNode, columnId: string): ColumnNode | undef
   return undefined;
 }
 
-// ---------------------------------------------------------------------------
-// Actualizaciones inmutables recursivas (reconstruyen el árbol completo)
-// ---------------------------------------------------------------------------
-
-function mapColumnRows(column: ColumnNode, mapRow: (row: RowNode) => RowNode): ColumnNode {
+function mapColumnRows(
+  column: ColumnNode,
+  mapRow: (row: RowNode) => RowNode,
+): ColumnNode {
   return { ...column, rows: column.rows.map(mapRow) };
 }
 
-function mapRowChildren(row: RowNode, mapChild: (child: RowChild) => RowChild): RowNode {
-  return { ...row, children: row.children.map(mapChild) };
+function mapRowColumns(
+  row: RowNode,
+  mapColumn: (column: ColumnNode) => ColumnNode,
+): RowNode {
+  return row.content === "columns"
+    ? {
+        ...row,
+        columns: row.columns.map(mapColumn) as [
+          ColumnNode,
+          ...ColumnNode[],
+        ],
+      }
+    : row;
 }
 
-export function updateColumnDeep(body: BodyNode, columnId: string, updater: (column: ColumnNode) => ColumnNode): BodyNode {
+export function updateColumnDeep(
+  body: BodyNode,
+  columnId: string,
+  updater: (column: ColumnNode) => ColumnNode,
+): BodyNode {
   const transform = (column: ColumnNode): ColumnNode => {
     if (column.id === columnId) return updater(column);
-    return mapColumnRows(column, (row) =>
-      mapRowChildren(row, (child) => (child.kind === "column" ? transform(child) : child))
-    );
+    return mapColumnRows(column, (row) => mapRowColumns(row, transform));
   };
   return { ...body, columns: body.columns.map(transform) };
 }
 
-export function updateRowDeep(body: BodyNode, rowId: string, updater: (row: RowNode) => RowNode): BodyNode {
+export function updateRowDeep(
+  body: BodyNode,
+  rowId: string,
+  updater: (row: RowNode) => RowNode,
+): BodyNode {
   const transformColumn = (column: ColumnNode): ColumnNode =>
-    mapColumnRows(column, (row) => {
-      if (row.id === rowId) return updater(row);
-      return mapRowChildren(row, (child) => (child.kind === "column" ? transformColumn(child) : child));
-    });
+    mapColumnRows(column, (row) =>
+      row.id === rowId
+        ? updater(row)
+        : mapRowColumns(row, transformColumn),
+    );
   return { ...body, columns: body.columns.map(transformColumn) };
 }
 
 export function updateComponentDeep(
   body: BodyNode,
   componentId: string,
-  updater: (component: ComponentNode) => ComponentNode
+  updater: (component: ComponentNode) => ComponentNode,
 ): BodyNode {
   const transformColumn = (column: ColumnNode): ColumnNode =>
-    mapColumnRows(column, (row) =>
-      mapRowChildren(row, (child) => {
-        if (child.kind === "component") return child.id === componentId ? updater(child) : child;
-        return transformColumn(child);
-      })
-    );
+    mapColumnRows(column, (row) => {
+      if (row.content === "component") {
+        return row.component.id === componentId
+          ? { ...row, component: updater(row.component) }
+          : row;
+      }
+      return mapRowColumns(row, transformColumn);
+    });
   return { ...body, columns: body.columns.map(transformColumn) };
 }
 
-/** Quita una Row de donde esté (Column de primer nivel o anidada dentro de otra Row). */
 export function removeRowDeep(body: BodyNode, rowId: string): BodyNode {
   const transformColumn = (column: ColumnNode): ColumnNode => ({
     ...column,
     rows: column.rows
       .filter((row) => row.id !== rowId)
-      .map((row) => mapRowChildren(row, (child) => (child.kind === "column" ? transformColumn(child) : child))),
+      .map((row) => mapRowColumns(row, transformColumn)),
   });
   return { ...body, columns: body.columns.map(transformColumn) };
 }
 
-/**
- * Quita una Column de donde esté. Si es una Column de primer nivel del Body,
- * no se elimina si es la única (el Body siempre necesita al menos 1);
- * las Columns anidadas dentro de una Row no tienen ese mínimo.
- */
-export function removeColumnDeep(body: BodyNode, columnId: string): BodyNode {
+export function removeColumnDeep(
+  body: BodyNode,
+  columnId: string,
+): BodyNode {
   const removeFromColumn = (column: ColumnNode): ColumnNode =>
-    mapColumnRows(column, (row) => ({
-      ...row,
-      children: row.children
-        .filter((child) => !(child.kind === "column" && child.id === columnId))
-        .map((child) => (child.kind === "column" ? removeFromColumn(child) : child)),
-    }));
+    mapColumnRows(column, (row) => {
+      if (row.content !== "columns") return row;
+      const columns = row.columns
+        .filter((child) => child.id !== columnId)
+        .map(removeFromColumn);
+      return columns.length
+        ? {
+            ...row,
+            columns: columns as [ColumnNode, ...ColumnNode[]],
+          }
+        : {
+            id: row.id,
+            kind: "row",
+            content: "empty",
+            height: row.height,
+            weight: row.weight,
+            properties: row.properties,
+            mcpMetadata: row.mcpMetadata,
+            extensions: row.extensions,
+          };
+    });
 
   const isTopLevel = body.columns.some((column) => column.id === columnId);
-  if (isTopLevel && body.columns.length <= 1) {
-    return body;
-  }
-
-  const columns = body.columns.filter((column) => column.id !== columnId).map(removeFromColumn);
-  return { ...body, columns };
+  if (isTopLevel && body.columns.length <= 1) return body;
+  return {
+    ...body,
+    columns: body.columns
+      .filter((column) => column.id !== columnId)
+      .map(removeFromColumn),
+  };
 }
-
 
 export function listComponents(body: BodyNode): ComponentNode[] {
   const components: ComponentNode[] = [];
   const visitColumn = (column: ColumnNode) => {
     for (const row of column.rows) {
-      for (const child of row.children) {
-        if (child.kind === "component") {
-          components.push(child);
-        } else {
-          visitColumn(child);
-        }
+      if (row.content === "component") {
+        components.push(row.component);
+      } else if (row.content === "columns") {
+        row.columns.forEach(visitColumn);
       }
     }
   };
-
   body.columns.forEach(visitColumn);
   return components;
 }
 
-export function cloneBody(body: BodyNode): BodyNode {
+export function cloneBody(
+  body: BodyNode,
+  existingIdentifiers: ReadonlySet<string> = new Set(),
+): BodyNode {
+  const usedIdentifiers = new Set(existingIdentifiers);
+  collectLayoutIdentifiers(body).forEach((id) => usedIdentifiers.add(id));
+  const cloneComponent = (component: ComponentNode): ComponentNode => ({
+    ...component,
+    id: takeIdentifier(usedIdentifiers),
+    properties: { ...component.properties },
+    observers: component.observers.map((observer) => ({ ...observer })),
+    mcpMetadata: component.mcpMetadata
+      ? { ...component.mcpMetadata }
+      : undefined,
+    extensions: component.extensions ? { ...component.extensions } : undefined,
+  });
   const cloneColumn = (column: ColumnNode): ColumnNode => ({
     ...column,
-    id: nextId("column"),
+    id: takeIdentifier(usedIdentifiers),
+    properties: { ...column.properties },
     rows: column.rows.map(cloneRow),
+    mcpMetadata: column.mcpMetadata ? { ...column.mcpMetadata } : undefined,
+    extensions: column.extensions ? { ...column.extensions } : undefined,
+    editorMetadata: column.editorMetadata
+      ? { ...column.editorMetadata }
+      : undefined,
   });
-  const cloneRow = (row: RowNode): RowNode => ({
-    ...row,
-    id: nextId("row"),
-    children: row.children.map((child) =>
-      child.kind === "component"
-        ? {
-            ...child,
-            id: nextId("component"),
-            properties: { ...child.properties },
-          }
-        : cloneColumn(child),
-    ),
-  });
+  const cloneRow = (row: RowNode): RowNode => {
+    const common = {
+      ...row,
+      id: takeIdentifier(usedIdentifiers),
+      properties: { ...row.properties },
+      mcpMetadata: row.mcpMetadata ? { ...row.mcpMetadata } : undefined,
+      extensions: row.extensions ? { ...row.extensions } : undefined,
+    };
+    if (row.content === "component") {
+      return {
+        ...common,
+        content: "component",
+        component: cloneComponent(row.component),
+      };
+    }
+    if (row.content === "columns") {
+      return {
+        ...common,
+        content: "columns",
+        columns: row.columns.map(cloneColumn) as [
+          ColumnNode,
+          ...ColumnNode[],
+        ],
+      };
+    }
+    return { ...common, content: "empty" };
+  };
 
   return {
     ...body,
-    id: nextId("body"),
+    id: takeIdentifier(usedIdentifiers),
+    properties: { ...body.properties },
     columns: body.columns.map(cloneColumn),
+    mcpMetadata: body.mcpMetadata ? { ...body.mcpMetadata } : undefined,
+    extensions: body.extensions ? { ...body.extensions } : undefined,
   };
+}
+
+
+
+export function createRowNode(
+  children: readonly (ComponentNode | ColumnNode)[] = [],
+  usedIdentifiers: Set<string> = new Set(),
+): RowNode {
+  const components = children.filter(
+    (child): child is ComponentNode => child.kind === "component",
+  );
+  const columns = children.filter(
+    (child): child is ColumnNode => child.kind === "column",
+  );
+  if (components.length > 1 || (components.length > 0 && columns.length > 0)) {
+    throw new Error(
+      "Aircraft H-3: a row cannot mix components and columns or contain multiple components.",
+    );
+  }
+  if (components.length === 1) {
+    return createComponentRowNode(components[0], usedIdentifiers);
+  }
+  if (columns.length) {
+    return createColumnsRowNode(
+      columns as [ColumnNode, ...ColumnNode[]],
+      usedIdentifiers,
+    );
+  }
+  return createEmptyRowNode(usedIdentifiers);
 }

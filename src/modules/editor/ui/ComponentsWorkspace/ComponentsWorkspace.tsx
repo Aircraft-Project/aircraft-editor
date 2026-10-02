@@ -31,6 +31,10 @@ export function ComponentsWorkspace({
     activeScreenId,
     screens,
     screenTrees,
+    catalogItems,
+    activeCatalogItemId,
+    openCatalogItem,
+    closeCatalogItem,
     selection,
     selectComponent,
     selectRow,
@@ -38,7 +42,6 @@ export function ComponentsWorkspace({
     addColumn,
     addColumnToRow,
     removeColumn,
-    setColumnWeight,
     removeRow,
     setRowWeight,
     setRowHeight,
@@ -48,8 +51,13 @@ export function ComponentsWorkspace({
     dropOnRow,
     openTriggerGraph,
   } = useEditorStore();
-  const body = screenTrees[activeScreenId];
+  const activeCatalogItem = catalogItems.find(
+    (item) => item.id === activeCatalogItemId,
+  );
+  const body =
+    activeCatalogItem?.layout ?? screenTrees[activeScreenId];
   const activeScreen = screens.find((screen) => screen.id === activeScreenId);
+  const activeContext = activeCatalogItem?.context ?? activeScreen?.context ?? "interface";
   const [schemas, setSchemas] = useState<readonly ComponentSchema[]>([]);
   const [contextRules, setContextRules] = useState<ContextRules | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
@@ -63,7 +71,7 @@ export function ComponentsWorkspace({
 
   useEffect(() => {
     let current = true;
-    const context = activeScreen?.context ?? "interface";
+    const context = activeContext;
     Promise.all([
       provider.listComponents(),
       provider.getContextRules(context),
@@ -87,7 +95,7 @@ export function ComponentsWorkspace({
     return () => {
       current = false;
     };
-  }, [activeScreen?.context, provider, revision]);
+  }, [activeContext, provider, revision]);
 
   const selectedComponent = useMemo(
     () =>
@@ -97,6 +105,20 @@ export function ComponentsWorkspace({
     [body, selection],
   );
 
+  const catalogItemTarget = useMemo(() => {
+    if (
+      activeCatalogItem ||
+      selectedComponent?.type !== "Catalog" ||
+      typeof selectedComponent.properties.itemView !== "string"
+    ) {
+      return undefined;
+    }
+    const itemView = selectedComponent.properties.itemView;
+    return catalogItems.find(
+      (item) => item.id === itemView || item.name === itemView,
+    );
+  }, [activeCatalogItem, catalogItems, selectedComponent]);
+
   const structuralInspector = useMemo(() => {
     if (selection?.kind === "row") {
       const row = findRow(body, selection.id);
@@ -104,7 +126,17 @@ export function ComponentsWorkspace({
         return (
           <Inspector
             state="row"
-            data={{ id: row.id, weight: row.weight, height: row.height }}
+            data={{
+              id: row.id,
+              weight: row.weight,
+              height: row.height,
+              requiresWeight:
+                row.content === "component" &&
+                row.component.type === "Catalog" &&
+                String(
+                  row.component.properties.orientation ?? "vertical",
+                ).toLowerCase() === "vertical",
+            }}
             onWeightChange={(weight) => setRowWeight(row.id, weight)}
             onHeightChange={(height) => setRowHeight(row.id, height)}
           />
@@ -114,20 +146,13 @@ export function ComponentsWorkspace({
     if (selection?.kind === "column") {
       const column = findColumn(body, selection.id);
       if (column) {
-        return (
-          <Inspector
-            state="column"
-            data={{ id: column.id, weight: column.weight }}
-            onWeightChange={(weight) => setColumnWeight(column.id, weight)}
-          />
-        );
+        return <Inspector state="column" data={{ id: column.id }} />;
       }
     }
     return null;
   }, [
     body,
     selection,
-    setColumnWeight,
     setRowHeight,
     setRowWeight,
   ]);
@@ -159,6 +184,14 @@ export function ComponentsWorkspace({
         onAdd={(item) => dropOnColumn(body.columns[0].id, item)}
       />
       <main className={styles.canvasRegion}>
+        {activeCatalogItem ? (
+          <div className={styles.catalogBanner}>
+            <span>Editando vista de catálogo: {activeCatalogItem.name}</span>
+            <button type="button" onClick={closeCatalogItem}>
+              Volver a la pantalla
+            </button>
+          </div>
+        ) : null}
         <LayoutCanvas
           body={body}
           devicePresetId={devicePresetId}
@@ -183,6 +216,11 @@ export function ComponentsWorkspace({
           onRename={(name) => renameComponent(selectedComponent.id, name)}
           onPropertyChange={(property, value) =>
             setComponentProperty(selectedComponent.id, property, value)
+          }
+          onEditCatalogItem={
+            catalogItemTarget
+              ? () => openCatalogItem(catalogItemTarget.id)
+              : undefined
           }
           onSelectEvent={(event) => {
             openTriggerGraph(selectedComponent.name, event);

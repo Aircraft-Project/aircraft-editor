@@ -47,6 +47,8 @@ export function ScreensWorkspace({
   const [contextStatus, setContextStatus] = useState<
     "loading" | "ready" | "error"
   >("loading");
+  const activeScreen =
+    screens.find((screen) => screen.id === activeScreenId) ?? screens[0];
 
   useEffect(() => {
     let current = true;
@@ -59,7 +61,15 @@ export function ScreensWorkspace({
           setContextStatus("error");
           return;
         }
-        setContexts(items);
+        const screenContexts = items.filter(
+          ({ context }) => context === "interface",
+        );
+        if (!screenContexts.length) {
+          setContexts([]);
+          setContextStatus("error");
+          return;
+        }
+        setContexts(screenContexts);
         setContextStatus("ready");
       })
       .catch(() => {
@@ -72,8 +82,6 @@ export function ScreensWorkspace({
     };
   }, [provider]);
 
-  const activeScreen =
-    screens.find((screen) => screen.id === activeScreenId) ?? screens[0];
   const body = screenTrees[activeScreen.id];
   const filteredScreens = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
@@ -173,13 +181,11 @@ export function ScreensWorkspace({
             <section className={styles.section}>
               <label>
                 <span>Nombre</span>
-                <input
-                  value={activeScreen.name}
-                  onChange={(event) =>
-                    updateScreen(activeScreen.id, {
-                      name: event.target.value,
-                    })
-                  }
+                <ScreenNameInput
+                  key={activeScreen.id}
+                  screenId={activeScreen.id}
+                  initialName={activeScreen.name}
+                  onPersist={(name) => updateScreen(activeScreen.id, { name })}
                 />
               </label>
               <label>
@@ -197,18 +203,11 @@ export function ScreensWorkspace({
                 <span>Tipo de pantalla</span>
                 <select
                   value={activeScreen.context}
-                  onChange={(event) =>
-                    updateScreen(activeScreen.id, {
-                      context: event.target.value,
-                    })
-                  }
-                  disabled={contextStatus !== "ready"}
+                  disabled
                 >
                   {contexts.map(({ context }) => (
                     <option key={context} value={context}>
-                      {context === "interface"
-                        ? "Pantalla"
-                        : "Elemento de catálogo"}
+                      {context === "interface" ? "Pantalla" : context}
                     </option>
                   ))}
                 </select>
@@ -249,6 +248,37 @@ export function ScreensWorkspace({
   );
 }
 
+interface ScreenNameInputProps {
+  readonly screenId: string;
+  readonly initialName: string;
+  readonly onPersist: (name: string) => void;
+}
+
+function ScreenNameInput({
+  screenId,
+  initialName,
+  onPersist,
+}: ScreenNameInputProps) {
+  const [draft, setDraft] = useState(initialName);
+
+  return (
+    <input
+      value={draft}
+      onChange={(event) => {
+        const nextName = event.target.value;
+        setDraft(nextName);
+        if (nextName.trim()) onPersist(nextName);
+      }}
+      onBlur={() => {
+        const persistedName = useEditorStore
+          .getState()
+          .screens.find((screen) => screen.id === screenId)?.name;
+        if (persistedName !== draft) setDraft(persistedName ?? initialName);
+      }}
+    />
+  );
+}
+
 interface CreateScreenFormProps {
   readonly contexts: readonly ContextRules[];
   readonly contextStatus: "loading" | "ready" | "error";
@@ -268,16 +298,11 @@ function CreateScreenForm({
 }: CreateScreenFormProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [context, setContext] = useState<ScreenContext>(
-    contexts[0]?.context ?? "",
-  );
-
-  const effectiveContext = contexts.some(
-    ({ context: contextName }) => contextName === context,
+  const effectiveContext: ScreenContext | "" = contexts.some(
+    ({ context }) => context === "interface",
   )
-    ? context
-    : (contexts[0]?.context ?? "");
-
+    ? "interface"
+    : "";
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const normalized = name.trim();
@@ -311,16 +336,11 @@ function CreateScreenForm({
         <span>Tipo de pantalla</span>
         <select
           value={effectiveContext}
-          onChange={(event) =>
-            setContext(event.target.value)
-          }
-          disabled={contextStatus !== "ready"}
+          disabled
         >
           {contexts.map(({ context: contextName }) => (
             <option key={contextName} value={contextName}>
-              {contextName === "interface"
-                ? "Pantalla"
-                : "Elemento de catálogo"}
+              {contextName === "interface" ? "Pantalla" : contextName}
             </option>
           ))}
         </select>

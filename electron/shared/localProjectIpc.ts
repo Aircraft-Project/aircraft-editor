@@ -7,6 +7,9 @@ export const LOCAL_PROJECT_CHANNELS = {
   deleteScreen: "aircraft:local-projects:delete-screen",
   saveLayout: "aircraft:local-projects:save-layout",
   saveTriggerGraphs: "aircraft:local-projects:save-trigger-graphs",
+  saveCatalogItem: "aircraft:local-projects:save-catalog-item",
+  deleteCatalogItem: "aircraft:local-projects:delete-catalog-item",
+  saveTheme: "aircraft:local-projects:save-theme",
   saveSettings: "aircraft:local-projects:save-settings",
   deleteProject: "aircraft:local-projects:delete",
   listResources: "aircraft:resources:list",
@@ -29,6 +32,10 @@ export interface OwnerProjectDocumentRequest extends OwnerProjectRequest {
 
 export interface DeleteScreenRequest extends OwnerProjectRequest {
   readonly screenId: string;
+}
+
+export interface DeleteCatalogItemRequest extends OwnerProjectRequest {
+  readonly catalogItemId: string;
 }
 
 export interface ResourceRequest extends OwnerProjectRequest {
@@ -54,6 +61,9 @@ export interface AircraftDesktopApi {
     saveTriggerGraphs(
       request: OwnerProjectDocumentRequest,
     ): Promise<void>;
+    saveCatalogItem(request: OwnerProjectDocumentRequest): Promise<void>;
+    deleteCatalogItem(request: DeleteCatalogItemRequest): Promise<void>;
+    saveTheme(request: OwnerProjectDocumentRequest): Promise<void>;
     saveSettings(request: OwnerProjectDocumentRequest): Promise<void>;
     deleteProject(request: OwnerProjectRequest): Promise<void>;
   };

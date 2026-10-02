@@ -6,6 +6,7 @@ import type {
 import {
   LocalProjectCorruptedError,
   type AircraftProject,
+  type CatalogItemDocument,
   type CreateLocalProjectInput,
   type LayoutDocument,
   type LocalProjectSummary,
@@ -16,6 +17,7 @@ import {
   type ResourceReference,
   type ScreenDocument,
   type TriggerGraphDocument,
+  type ThemeDocument,
 } from "../domain";
 
 function bridge(): AircraftDesktopApi {
@@ -127,6 +129,42 @@ export class ElectronLocalProjectRepository
     });
   }
 
+  async saveCatalogItem(
+    ownerId: string,
+    projectId: string,
+    document: CatalogItemDocument,
+  ): Promise<void> {
+    await bridge().localProjects.saveCatalogItem({
+      ownerId,
+      projectId,
+      document,
+    });
+  }
+
+  async deleteCatalogItem(
+    ownerId: string,
+    projectId: string,
+    catalogItemId: string,
+  ): Promise<void> {
+    await bridge().localProjects.deleteCatalogItem({
+      ownerId,
+      projectId,
+      catalogItemId,
+    });
+  }
+
+  async saveTheme(
+    ownerId: string,
+    projectId: string,
+    document: ThemeDocument,
+  ): Promise<void> {
+    await bridge().localProjects.saveTheme({
+      ownerId,
+      projectId,
+      document,
+    });
+  }
+
   async saveSettings(
     ownerId: string,
     projectId: string,
@@ -211,8 +249,10 @@ function parseProject(value: unknown): AircraftProject {
   requireArray(record.screens);
   requireRecord(record.layouts);
   requireRecord(record.triggerGraphs);
+  requireArray(record.catalogItems);
   requireRecord(record.resources);
   requireRecord(record.settings);
+  requireRecord(record.theme);
   return value as AircraftProject;
 }
 

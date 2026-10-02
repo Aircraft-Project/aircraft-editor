@@ -33,7 +33,12 @@
     color 150ms ease;
 }
 
-.item:hover {
+.item:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.item:hover:not(:disabled) {
   color: #ffffff;
   background: rgba(14, 112, 203, 0.12);
 }

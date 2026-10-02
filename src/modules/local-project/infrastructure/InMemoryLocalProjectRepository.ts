@@ -1,4 +1,7 @@
-import { createEmptyBody } from "@/modules/screens/layoutTree";
+import {
+  createAircraftIdentifier,
+  createEmptyBody,
+} from "@/modules/screens/layoutTree";
 import type {
   LocalProjectRepository,
   ResourceRepository,
@@ -11,6 +14,7 @@ import {
   assertOwnerId,
   assertSafeIdentifier,
   type AircraftProject,
+  type CatalogItemDocument,
   type CreateLocalProjectInput,
   type LayoutDocument,
   type LocalProjectSummary,
@@ -22,6 +26,7 @@ import {
   type ResourceReference,
   type ScreenDocument,
   type TriggerGraphDocument,
+  type ThemeDocument,
 } from "../domain";
 
 const clone = <T>(value: T): T => {
@@ -56,7 +61,7 @@ export class InMemoryLocalProjectRepository
     assertOwnerId(input.ownerId);
     const projectId = crypto.randomUUID();
     const now = new Date().toISOString();
-    const screenId = crypto.randomUUID();
+    const screenId = createAircraftIdentifier();
     const project: AircraftProject = {
       manifest: {
         documentVersion: DOCUMENT_VERSION,
@@ -89,6 +94,7 @@ export class InMemoryLocalProjectRepository
           screenId,
           name: "Home",
           description: "Pantalla principal",
+          destination: screenId,
           context: "interface",
           isInitial: true,
           order: 0,
@@ -102,10 +108,17 @@ export class InMemoryLocalProjectRepository
         },
       },
       triggerGraphs: {},
+      catalogItems: [],
       resources: {
         documentVersion: DOCUMENT_VERSION,
         projectId,
         resources: [],
+      },
+      theme: {
+        documentVersion: DOCUMENT_VERSION,
+        projectId,
+        theme: {},
+        componentTheme: {},
       },
       settings: {
         documentVersion: DOCUMENT_VERSION,
@@ -203,6 +216,48 @@ export class InMemoryLocalProjectRepository
         ...project.triggerGraphs,
         [document.screenId]: clone(document),
       },
+    }));
+  }
+
+  async saveCatalogItem(
+    ownerId: string,
+    projectId: string,
+    document: CatalogItemDocument,
+  ): Promise<void> {
+    assertSafeIdentifier(document.catalogItemId);
+    this.update(ownerId, projectId, (project) => ({
+      ...project,
+      catalogItems: [
+        ...project.catalogItems.filter(
+          (item) => item.catalogItemId !== document.catalogItemId,
+        ),
+        clone(document),
+      ],
+    }));
+  }
+
+  async deleteCatalogItem(
+    ownerId: string,
+    projectId: string,
+    catalogItemId: string,
+  ): Promise<void> {
+    assertSafeIdentifier(catalogItemId);
+    this.update(ownerId, projectId, (project) => ({
+      ...project,
+      catalogItems: project.catalogItems.filter(
+        (item) => item.catalogItemId !== catalogItemId,
+      ),
+    }));
+  }
+
+  async saveTheme(
+    ownerId: string,
+    projectId: string,
+    document: ThemeDocument,
+  ): Promise<void> {
+    this.update(ownerId, projectId, (project) => ({
+      ...project,
+      theme: clone(document),
     }));
   }
 
