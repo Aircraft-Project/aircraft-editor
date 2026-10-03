@@ -1,12 +1,16 @@
 import { app, BrowserWindow, dialog, session } from "electron";
 import path from "node:path";
 import { registerLocalProjectIpc } from "./registerLocalProjectIpc";
+import { AircraftWorkspaceBootstrap } from "../workspace/AircraftWorkspaceBootstrap";
+import { resolveAircraftWorkspacePaths } from "../workspace/AircraftWorkspaceResolver";
+import type { AircraftWorkspacePaths } from "../workspace/AircraftWorkspacePaths";
 
 const DEFAULT_RENDERER_URL = "http://127.0.0.1:3000";
 const WINDOW_BACKGROUND = "#020b1a";
 const NET_ERROR_ABORTED = -3;
 
 let mainWindow: BrowserWindow | null = null;
+let aircraftWorkspacePaths: AircraftWorkspacePaths | null = null;
 
 function resolveRendererUrl(): URL {
   const rendererUrl = new URL(
@@ -23,6 +27,23 @@ function resolveRendererUrl(): URL {
   }
 
   return rendererUrl;
+}
+
+async function initializeAircraftWorkspace(): Promise<AircraftWorkspacePaths> {
+  if (aircraftWorkspacePaths) return aircraftWorkspacePaths;
+
+  const paths = resolveAircraftWorkspacePaths(app.getPath("home"));
+  await new AircraftWorkspaceBootstrap().bootstrap(paths);
+  aircraftWorkspacePaths = paths;
+
+  if (!app.isPackaged) {
+    console.info("[workspace] root=" + paths.root);
+    console.info("[workspace] config=" + paths.config);
+    console.info("[workspace] security=" + paths.security);
+    console.info("[workspace] localProjects=" + paths.localProjects);
+  }
+
+  return paths;
 }
 
 function configureSessionSecurity(): void {
@@ -143,7 +164,10 @@ if (!hasSingleInstanceLock) {
 
   app.whenReady()
     .then(async () => {
+      await initializeAircraftWorkspace();
       configureSessionSecurity();
+      // Phase 1.5.4A transition: encrypted project storage remains under
+      // userData. Phases 1.5.4B/1.5.4C will migrate security and local-project roots.
       registerLocalProjectIpc(app.getPath("userData"));
       await createMainWindow();
 

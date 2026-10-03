@@ -10,6 +10,34 @@ Aircraft Editor stores each desktop project as an independent, encrypted directo
 4. Editor stores hydrate from granular documents; autosave writes only affected documents.
 5. Resource bytes are addressed by SHA-256 and remain outside the resource manifest.
 
+## Aircraft Editor workspace
+
+Electron Main resolves one installation-independent workspace from `app.getPath("home")` and initializes it before opening the application window:
+
+```text
+<home>/AircraftEditor/
+├── config/
+│   └── workspace.json
+├── security/
+├── local-projects/
+├── logs/
+├── cache/
+└── temp/
+```
+
+`config/workspace.json` is intentionally minimal and portable:
+
+```json
+{
+  "workspaceVersion": 1,
+  "localProjectsDirectory": "local-projects"
+}
+```
+
+The resolver never hardcodes a username or stores the absolute home path in the configuration. Bootstrap is idempotent: it creates missing directories and the configuration once, but it never overwrites an existing valid file. Invalid JSON, an unsupported `workspaceVersion`, or a different `localProjectsDirectory` fails startup with a controlled error so existing data is not silently replaced.
+
+This phase establishes the future workspace only. The active encrypted project store remains `<userData>/local-projects` until Phase 1.5.4C, and the current protected master key remains in its legacy location until Phase 1.5.4B. The `security/.master-key` path is reserved by `AircraftWorkspacePaths` but is not created or migrated here. No workspace path is exposed to the renderer or through IPC.
+
 ## Scope and invariants
 
 | Topic | Version 1 decision |
