@@ -1,15 +1,24 @@
 import { ipcMain, safeStorage } from "electron";
-import path from "node:path";
 import { LOCAL_PROJECT_CHANNELS } from "../shared/localProjectIpc";
 import { AtomicFileStore } from "../storage/AtomicFileStore";
 import { KeyManager } from "../storage/KeyManager";
 import { LocalProjectFileStore } from "../storage/LocalProjectFileStore";
 
-export function registerLocalProjectIpc(userDataPath: string): void {
+export interface LocalProjectIpcOptions {
+  readonly projectRootPath: string;
+  readonly masterKeyPath: string;
+}
+
+export function registerLocalProjectIpc(
+  options: LocalProjectIpcOptions,
+): void {
   const files = new AtomicFileStore();
-  const rootPath = path.join(userDataPath, "local-projects");
-  const keys = new KeyManager(rootPath, safeStorage, files);
-  const store = new LocalProjectFileStore(rootPath, keys, files);
+  const keys = new KeyManager(options.masterKeyPath, safeStorage, files);
+  const store = new LocalProjectFileStore(
+    options.projectRootPath,
+    keys,
+    files,
+  );
 
   ipcMain.handle(LOCAL_PROJECT_CHANNELS.list, (_event, ownerId: unknown) =>
     store.listByOwner(requireString(ownerId)),

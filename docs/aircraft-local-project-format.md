@@ -36,7 +36,7 @@ Electron Main resolves one installation-independent workspace from `app.getPath(
 
 The resolver never hardcodes a username or stores the absolute home path in the configuration. Bootstrap is idempotent: it creates missing directories and the configuration once, but it never overwrites an existing valid file. Invalid JSON, an unsupported `workspaceVersion`, or a different `localProjectsDirectory` fails startup with a controlled error so existing data is not silently replaced.
 
-This phase establishes the future workspace only. The active encrypted project store remains `<userData>/local-projects` until Phase 1.5.4C, and the current protected master key remains in its legacy location until Phase 1.5.4B. The `security/.master-key` path is reserved by `AircraftWorkspacePaths` but is not created or migrated here. No workspace path is exposed to the renderer or through IPC.
+Phase 1.5.4B activates `<home>/AircraftEditor/security/.master-key` as the installation master-key location. The active encrypted project store remains `<userData>/local-projects` until Phase 1.5.4C. If a legacy `<userData>/local-projects/.master-key` exists, startup validates and copies its protected bytes atomically to the workspace without rotation or project re-encryption; the legacy file remains as a temporary backup. Do not delete legacy storage manually before Phase 1.5.4C. No workspace path or migration status is exposed to the renderer or through IPC.
 
 ## Scope and invariants
 
@@ -60,9 +60,13 @@ Local storage fails closed when `safeStorage.isEncryptionAvailable()` is false. 
 ## Physical structure
 
 ```text
+<home>/AircraftEditor/
+└── security/
+    └── .master-key          # active installation master key
+
 <userData>/
 └── local-projects/
-    ├── .master-key
+    ├── .master-key          # temporary legacy backup when present
     └── users/
         └── <sha256(ownerId)>/
             └── projects/
@@ -143,7 +147,7 @@ Reading reverses those steps. Decrypted resource bytes must equal the original b
 
 ```text
 random installation master key (32 bytes)
-  └─ safeStorage.encryptString(base64(masterKey)) → .master-key
+  └─ safeStorage.encryptString(base64(masterKey)) → <home>/AircraftEditor/security/.master-key
       └─ HKDF-SHA256(salt = UTF-8 ownerId, info = "aircraft:user:v1")
           └─ 32-byte owner key
               └─ HKDF-SHA256(salt = UTF-8 projectId, info = "aircraft:project:v1")
@@ -151,6 +155,8 @@ random installation master key (32 bytes)
 ```
 
 `ownerId` and `projectId` provide HKDF separation but are not secrets and are never used directly as AES keys. Keys and decrypted project payloads must not be logged.
+
+The master key belongs to the Aircraft workspace, not to an individual project or to the local-projects directory. Migration compares decrypted 32-byte keys with `timingSafeEqual`; conflicting valid keys fail closed and neither file is overwritten. The cryptographic algorithms, HKDF salts/info, and existing project ciphertext remain unchanged.
 
 ### Desktop identity trust boundary
 

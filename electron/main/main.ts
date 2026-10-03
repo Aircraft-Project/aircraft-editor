@@ -1,6 +1,8 @@
-import { app, BrowserWindow, dialog, session } from "electron";
+import { app, BrowserWindow, dialog, safeStorage, session } from "electron";
 import path from "node:path";
 import { registerLocalProjectIpc } from "./registerLocalProjectIpc";
+import { AircraftMasterKeyMigration } from "../security/AircraftMasterKeyMigration";
+import { AtomicFileStore } from "../storage/AtomicFileStore";
 import { AircraftWorkspaceBootstrap } from "../workspace/AircraftWorkspaceBootstrap";
 import { resolveAircraftWorkspacePaths } from "../workspace/AircraftWorkspaceResolver";
 import type { AircraftWorkspacePaths } from "../workspace/AircraftWorkspacePaths";
@@ -164,11 +166,31 @@ if (!hasSingleInstanceLock) {
 
   app.whenReady()
     .then(async () => {
-      await initializeAircraftWorkspace();
+      const workspace = await initializeAircraftWorkspace();
+      const legacyProjectRoot = path.join(
+        app.getPath("userData"),
+        "local-projects",
+      );
+      const migration = await new AircraftMasterKeyMigration(
+        safeStorage,
+        new AtomicFileStore(),
+      ).migrate({
+        legacyMasterKeyPath: path.join(legacyProjectRoot, ".master-key"),
+        workspaceMasterKeyPath: workspace.masterKey,
+      });
+
+      if (!app.isPackaged) {
+        console.info("[security] masterKey=" + workspace.masterKey);
+        console.info("[security] migration=" + migration.status);
+      }
+
       configureSessionSecurity();
-      // Phase 1.5.4A transition: encrypted project storage remains under
-      // userData. Phases 1.5.4B/1.5.4C will migrate security and local-project roots.
-      registerLocalProjectIpc(app.getPath("userData"));
+      // Phase 1.5.4B transition: project files remain under userData.
+      // Phase 1.5.4C will migrate the active local-project root.
+      registerLocalProjectIpc({
+        projectRootPath: legacyProjectRoot,
+        masterKeyPath: workspace.masterKey,
+      });
       await createMainWindow();
 
       app.on("activate", () => {

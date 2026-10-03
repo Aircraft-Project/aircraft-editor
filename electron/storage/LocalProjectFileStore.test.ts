@@ -36,7 +36,11 @@ const fakeSafeStorage = {
 
 function buildStore(rootPath: string) {
   const files = new AtomicFileStore();
-  const keys = new KeyManager(rootPath, fakeSafeStorage, files);
+  const keys = new KeyManager(
+    path.join(rootPath, ".master-key"),
+    fakeSafeStorage,
+    files,
+  );
   return {
     files,
     keys,
@@ -500,7 +504,11 @@ describe("LocalProjectFileStore", () => {
     const unavailable = {
       isEncryptionAvailable: () => false,
     } as unknown as SafeStorage;
-    const keys = new KeyManager(rootPath, unavailable, files);
+    const keys = new KeyManager(
+      path.join(rootPath, ".master-key"),
+      unavailable,
+      files,
+    );
 
     await expect(keys.projectKey(ownerA, "project-safe")).rejects.toBeInstanceOf(
       LocalStorageUnavailableError,

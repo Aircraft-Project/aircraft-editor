@@ -42,7 +42,11 @@ function buildFileStore(rootPath: string): {
   readonly keys: KeyManager;
 } {
   const files = new AtomicFileStore();
-  const keys = new KeyManager(rootPath, fakeSafeStorage, files);
+  const keys = new KeyManager(
+    path.join(rootPath, ".master-key"),
+    fakeSafeStorage,
+    files,
+  );
   return {
     store: new LocalProjectFileStore(rootPath, keys, files),
     keys,

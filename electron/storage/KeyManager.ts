@@ -2,11 +2,12 @@ import { createHash, hkdfSync, randomBytes } from "node:crypto";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { SafeStorage } from "electron";
+import { decodeProtectedMasterKey } from "../security/MasterKeyProtection";
 import { AtomicFileStore } from "./AtomicFileStore";
 
 export class LocalStorageUnavailableError extends Error {
-  constructor() {
-    super("Encrypted local project storage is not available.");
+  constructor(options?: ErrorOptions) {
+    super("Encrypted local project storage is not available.", options);
     this.name = "LocalStorageUnavailableError";
   }
 }
@@ -15,7 +16,7 @@ export class KeyManager {
   private masterKeyPromise: Promise<Buffer> | null = null;
 
   constructor(
-    private readonly rootPath: string,
+    private readonly masterKeyPath: string,
     private readonly safeStorage: SafeStorage,
     private readonly files: AtomicFileStore,
   ) {}
@@ -58,24 +59,34 @@ export class KeyManager {
     if (!this.safeStorage.isEncryptionAvailable()) {
       throw new LocalStorageUnavailableError();
     }
-    const keyPath = path.join(this.rootPath, ".master-key");
+
     try {
-      const protectedKey = await readFile(keyPath);
-      const plaintext = this.safeStorage.decryptString(protectedKey);
-      const key = Buffer.from(plaintext, "base64");
-      if (key.length !== 32) throw new LocalStorageUnavailableError();
-      return key;
+      const protectedKey = await readFile(this.masterKeyPath);
+      try {
+        return decodeProtectedMasterKey(protectedKey, this.safeStorage);
+      } catch (error) {
+        throw new LocalStorageUnavailableError({ cause: error });
+      }
     } catch (error) {
-      const nodeError = error as NodeJS.ErrnoException;
-      if (nodeError.code !== "ENOENT") throw error;
+      if (error instanceof LocalStorageUnavailableError) throw error;
+      if (!isMissingFile(error)) throw error;
     }
 
-    await mkdir(this.rootPath, { recursive: true });
+    await mkdir(path.dirname(this.masterKeyPath), { recursive: true });
     const key = randomBytes(32);
     const protectedKey = this.safeStorage.encryptString(
       key.toString("base64"),
     );
-    await this.files.write(keyPath, protectedKey);
+    await this.files.write(this.masterKeyPath, protectedKey);
     return key;
   }
+}
+
+function isMissingFile(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { readonly code?: unknown }).code === "ENOENT"
+  );
 }
