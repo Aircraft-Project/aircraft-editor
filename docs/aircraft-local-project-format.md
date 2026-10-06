@@ -1,14 +1,16 @@
 # Aircraft local project format v1
 
-Aircraft Editor stores each desktop project as an independent, encrypted directory under Electron `userData`. Structured documents use MessagePack; resources keep their original bytes. The renderer never receives physical paths and never calls Node filesystem APIs.
+Aircraft Editor stores each desktop project as an independent, encrypted directory under the installation workspace at `<home>/AircraftEditor/local-projects`. Structured documents use MessagePack; resources keep their original bytes. The renderer never receives physical paths and never calls Node filesystem APIs.
 
 ## Quick path
 
-1. Electron resolves `<userData>/local-projects`.
-2. A stable session `user.id` selects `users/<sha256(ownerId)>`.
-3. Each project is loaded from `projects/<projectId>` and decrypted with its own derived key.
-4. Editor stores hydrate from granular documents; autosave writes only affected documents.
-5. Resource bytes are addressed by SHA-256 and remain outside the resource manifest.
+1. Electron resolves and bootstraps `<home>/AircraftEditor`.
+2. Startup activates the protected master key in `security/.master-key`.
+3. Startup validates or migrates the local project store into `local-projects` before registering project IPC.
+4. A stable session `user.id` selects `users/<sha256(ownerId)>`.
+5. Each project is loaded from `projects/<projectId>` and decrypted with its own derived key.
+6. Editor stores hydrate from granular documents; autosave writes only affected documents.
+7. Resource bytes are addressed by SHA-256 and remain outside the resource manifest.
 
 ## Aircraft Editor workspace
 
@@ -36,7 +38,9 @@ Electron Main resolves one installation-independent workspace from `app.getPath(
 
 The resolver never hardcodes a username or stores the absolute home path in the configuration. Bootstrap is idempotent: it creates missing directories and the configuration once, but it never overwrites an existing valid file. Invalid JSON, an unsupported `workspaceVersion`, or a different `localProjectsDirectory` fails startup with a controlled error so existing data is not silently replaced.
 
-Phase 1.5.4B activates `<home>/AircraftEditor/security/.master-key` as the installation master-key location. The active encrypted project store remains `<userData>/local-projects` until Phase 1.5.4C. If a legacy `<userData>/local-projects/.master-key` exists, startup validates and copies its protected bytes atomically to the workspace without rotation or project re-encryption; the legacy file remains as a temporary backup. Do not delete legacy storage manually before Phase 1.5.4C. No workspace path or migration status is exposed to the renderer or through IPC.
+Phase 1.5.4C makes `<home>/AircraftEditor/local-projects` the active encrypted project store. The directory contains a versioned `.aircraft-local-store.json` marker with `{ "storageVersion": 1 }`; a valid marker makes the workspace store authoritative on later starts. A missing marker triggers initialization or migration, while invalid JSON or an unsupported storage version fails startup closed.
+
+Migration reads only the legacy `<userData>/local-projects/users` tree. It copies missing files atomically, compares existing file contents by streaming SHA-256, rejects byte conflicts and unexpected target entries, and writes the marker only after full verification. Partial compatible targets resume safely. The legacy tree is retained as a backup and is never modified or deleted. A legacy or target `.master-key` is never copied into `local-projects`; the active key remains exclusively at `<home>/AircraftEditor/security/.master-key`. No workspace path or migration status is exposed to the renderer or through IPC.
 
 ## Scope and invariants
 
@@ -61,12 +65,12 @@ Local storage fails closed when `safeStorage.isEncryptionAvailable()` is false. 
 
 ```text
 <home>/AircraftEditor/
-└── security/
-    └── .master-key          # active installation master key
-
-<userData>/
+├── config/
+│   └── workspace.json
+├── security/
+│   └── .master-key                  # active installation master key
 └── local-projects/
-    ├── .master-key          # temporary legacy backup when present
+    ├── .aircraft-local-store.json   # { "storageVersion": 1 }
     └── users/
         └── <sha256(ownerId)>/
             └── projects/
@@ -89,6 +93,8 @@ Local storage fails closed when `safeStorage.isEncryptionAvailable()` is false. 
                         ├── project.airsettings
                         └── theme.airtheme
 ```
+
+The former `<userData>/local-projects` directory is a retained migration source/backup only. It is not consulted after a valid workspace marker exists. It may contain the historical `.master-key`, but that file is excluded from project migration and is never used as a project-store artifact.
 
 Every `projectId`, `screenId`, `catalogItemId`, and resource ID used to construct a path must match `[A-Za-z0-9][A-Za-z0-9_-]{0,127}`. Renderer input can never select a physical path.
 

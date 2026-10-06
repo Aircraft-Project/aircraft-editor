@@ -3,6 +3,7 @@ import path from "node:path";
 import { registerLocalProjectIpc } from "./registerLocalProjectIpc";
 import { AircraftMasterKeyMigration } from "../security/AircraftMasterKeyMigration";
 import { AtomicFileStore } from "../storage/AtomicFileStore";
+import { AircraftLocalProjectsMigration } from "../storage/AircraftLocalProjectsMigration";
 import { AircraftWorkspaceBootstrap } from "../workspace/AircraftWorkspaceBootstrap";
 import { resolveAircraftWorkspacePaths } from "../workspace/AircraftWorkspaceResolver";
 import type { AircraftWorkspacePaths } from "../workspace/AircraftWorkspacePaths";
@@ -171,26 +172,35 @@ if (!hasSingleInstanceLock) {
         app.getPath("userData"),
         "local-projects",
       );
-      const migration = await new AircraftMasterKeyMigration(
+      const securityMigration = await new AircraftMasterKeyMigration(
         safeStorage,
         new AtomicFileStore(),
       ).migrate({
         legacyMasterKeyPath: path.join(legacyProjectRoot, ".master-key"),
         workspaceMasterKeyPath: workspace.masterKey,
       });
+      const localProjectsMigration =
+        await new AircraftLocalProjectsMigration().migrate({
+          legacyProjectRoot,
+          workspaceProjectRoot: workspace.localProjects,
+        });
 
       if (!app.isPackaged) {
         console.info("[security] masterKey=" + workspace.masterKey);
-        console.info("[security] migration=" + migration.status);
+        console.info("[security] migration=" + securityMigration.status);
+        console.info(
+          "[local-projects] migration=" + localProjectsMigration.status,
+        );
+        console.info(
+          "[local-projects] root=" + localProjectsMigration.projectRootPath,
+        );
       }
 
-      configureSessionSecurity();
-      // Phase 1.5.4B transition: project files remain under userData.
-      // Phase 1.5.4C will migrate the active local-project root.
       registerLocalProjectIpc({
-        projectRootPath: legacyProjectRoot,
+        projectRootPath: localProjectsMigration.projectRootPath,
         masterKeyPath: workspace.masterKey,
       });
+      configureSessionSecurity();
       await createMainWindow();
 
       app.on("activate", () => {
