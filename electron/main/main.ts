@@ -14,6 +14,7 @@ const NET_ERROR_ABORTED = -3;
 
 let mainWindow: BrowserWindow | null = null;
 let aircraftWorkspacePaths: AircraftWorkspacePaths | null = null;
+let isStorageReadyForRenderer = false;
 
 function resolveRendererUrl(): URL {
   const rendererUrl = new URL(
@@ -162,6 +163,7 @@ if (!hasSingleInstanceLock) {
   app.quit();
 } else {
   app.on("second-instance", () => {
+    if (!isStorageReadyForRenderer) return;
     void createMainWindow();
   });
 
@@ -201,6 +203,7 @@ if (!hasSingleInstanceLock) {
         masterKeyPath: workspace.masterKey,
       });
       configureSessionSecurity();
+      isStorageReadyForRenderer = true;
       await createMainWindow();
 
       app.on("activate", () => {
